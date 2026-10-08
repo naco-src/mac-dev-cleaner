@@ -15,8 +15,9 @@ artifact_root="${STAGE_DIR}/${APP_BUNDLE_NAME}"
 validate_app_bundle "${artifact_root}"
 
 # Must match apps/mac_dev_cleaner/desktop_updater.yaml and desktop_updater.keys.json feedUrl.
-base_url="${DESKTOP_UPDATER_PUBLISH_BASE_URL:-https://github.com/naco-src/mac-dev-cleaner/releases/latest/download}"
+base_url="${DESKTOP_UPDATER_PUBLISH_BASE_URL:-https://raw.githubusercontent.com/naco-src/mac-dev-cleaner/updates}"
 export GITHUB_RELEASE_TAG="${TAG}"
+export GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-naco-src/mac-dev-cleaner}"
 
 MDC_FLUTTER="${MDC_FLUTTER:-fvm flutter}"
 read -ra FLUTTER <<< "${MDC_FLUTTER}"

@@ -5,9 +5,9 @@ import 'package:path_provider/path_provider.dart';
 
 import 'json_file_update_recovery_store.dart';
 
-/// GitHub Releases feed (latest non-prerelease asset).
+/// Update feed on the repo `updates` branch (see desktop_updater.yaml).
 const kDesktopUpdaterAppArchiveUrl =
-    'https://github.com/naco-src/mac-dev-cleaner/releases/latest/download/app-archive.json';
+    'https://raw.githubusercontent.com/naco-src/mac-dev-cleaner/updates/app-archive.json';
 
 const kMacOsPackageId = 'io.github.nguyenhoangvannha.macDevCleaner';
 

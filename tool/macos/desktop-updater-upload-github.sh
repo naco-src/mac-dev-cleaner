@@ -1,38 +1,64 @@
 #!/usr/bin/env bash
-# Upload desktop_updater publish payloads to the current GitHub Release (customCommand provider).
+# Publish desktop_updater artifacts to the repo `updates` branch (customCommand provider).
+#
+# desktop_updater signs nested URLs (releases/stable/…/macos/release.json). GitHub
+# Release assets are flat: `gh release upload` keeps only the basename, and the API
+# turns slashes in asset names into dots. Those URLs never match signed manifests.
+# Push the publish tree to a git branch and serve it via raw.githubusercontent.com.
 set -euo pipefail
 
 local_root="${DESKTOP_UPDATER_LOCAL_ROOT:?DESKTOP_UPDATER_LOCAL_ROOT is required}"
-tag="${GITHUB_RELEASE_TAG:-${TAG:-}}"
-if [ -z "${tag}" ]; then
-  echo "Set GITHUB_RELEASE_TAG or TAG to the GitHub release tag." >&2
-  exit 64
-fi
-
-if ! command -v gh >/dev/null 2>&1; then
-  echo "gh CLI is required to upload update assets." >&2
-  exit 127
-fi
-
+tag="${GITHUB_RELEASE_TAG:-${TAG:-unknown}}"
 phase="${DESKTOP_UPDATER_UPLOAD_PHASE:-versioned}"
 receipt_path="${DESKTOP_UPDATER_INDEX_PUBLISH_RECEIPT:-}"
 
-upload_tree() {
-  local root="$1"
-  local -a args=()
-  while IFS= read -r -d '' file; do
-    rel="${file#"${root}/"}"
-    args+=("${file}#${rel}")
-  done < <(find "${root}" -type f -print0)
-  if [ "${#args[@]}" -eq 0 ]; then
-    echo "No files to upload under ${root}" >&2
-    exit 1
-  fi
-  echo "Uploading ${#args[@]} file(s) to GitHub release ${tag} (${phase})"
-  gh release upload "${tag}" "${args[@]}" --clobber
-}
+if ! command -v git >/dev/null 2>&1; then
+  echo "git is required to publish desktop_updater artifacts." >&2
+  exit 127
+fi
 
-upload_tree "${local_root}"
+branch="${DESKTOP_UPDATER_UPDATES_BRANCH:-updates}"
+repo="${GITHUB_REPOSITORY:-}"
+if [ -z "${repo}" ]; then
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "Set GITHUB_REPOSITORY or install gh to resolve the repository." >&2
+    exit 64
+  fi
+  repo="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
+fi
+
+token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+if [ -z "${token}" ]; then
+  echo "Set GH_TOKEN or GITHUB_TOKEN to push the updates branch." >&2
+  exit 64
+fi
+
+work="$(mktemp -d)"
+trap 'rm -rf "${work}"' EXIT
+
+git -C "${work}" init -q
+git -C "${work}" remote add origin "https://x-access-token:${token}@github.com/${repo}.git"
+git -C "${work}" config user.email "github-actions[bot]@users.noreply.github.com"
+git -C "${work}" config user.name "github-actions[bot]"
+
+if git -C "${work}" fetch --depth 1 origin "${branch}" 2>/dev/null; then
+  git -C "${work}" checkout -q FETCH_HEAD
+else
+  git -C "${work}" checkout -q --orphan "${branch}"
+  git -C "${work}" rm -rf . >/dev/null 2>&1 || true
+fi
+
+rsync -a "${local_root}/" "${work}/"
+git -C "${work}" add -A
+if git -C "${work}" diff --staged --quiet; then
+  echo "No changes to publish on branch ${branch} (${phase})"
+else
+  git -C "${work}" commit -q -m "desktop_updater ${tag} (${phase})"
+  git -C "${work}" push origin "HEAD:${branch}"
+  echo "Pushed desktop_updater ${phase} payload to ${repo}@${branch}"
+  # raw.githubusercontent.com can lag briefly after a push.
+  sleep 5
+fi
 
 if [ "${phase}" = "index" ]; then
   if [ -z "${receipt_path}" ]; then

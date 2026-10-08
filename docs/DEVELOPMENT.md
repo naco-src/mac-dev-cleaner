@@ -57,14 +57,16 @@ Both workflows are **`workflow_dispatch` only**.
 
 Release uses `MDC_FLUTTER=fvm flutter`, workspace cleanup actions under `.github/actions/`, `tool/ci/gh-release-upload.sh`, and `tool/ci/generate-release-notes.sh` (commit subjects since the previous `v*` tag when release notes are left blank).
 
-In-app updates use [desktop_updater](https://pub.dev/packages/desktop_updater) with the feed at `https://github.com/naco-src/mac-dev-cleaner/releases/latest/download/app-archive.json`. Updates are **optional** in the app (Check for updates in the toolbar; no check on launch). Release workflow: enable **Publish in-app update**; use **Mandatory update** only when you need a forced upgrade. Requires secrets:
+In-app updates use [desktop_updater](https://pub.dev/packages/desktop_updater) with the feed at `https://raw.githubusercontent.com/naco-src/mac-dev-cleaner/updates/app-archive.json` (git branch `updates`, not GitHub Release assets). Updates are **optional** in the app (Check for updates in the toolbar; no check on launch). Release workflow: enable **Publish in-app update**; use **Mandatory update** only when you need a forced upgrade. Requires secrets:
 
 - `DESKTOP_UPDATER_KEY_BUNDLE_BASE64` — output of `dart run desktop_updater:release keys export --output release-key.dukey`
 - `DESKTOP_UPDATER_KEY_BUNDLE_PASSPHRASE`
 
-Generate keys once in `apps/mac_dev_cleaner` (`desktop_updater.yaml` + `dart run desktop_updater:release keygen`). Commit `desktop_updater.keys.json`; keep `release-key.dukey` out of git. Publish `baseUrl` is the stable GitHub **`releases/latest/download`** URL (same as the app feed), not the release tag path. After changing `feedUrl` in `desktop_updater.keys.json`, re-export `release-key.dukey` and refresh both GitHub secrets.
+Generate keys once in `apps/mac_dev_cleaner` (`desktop_updater.yaml` + `dart run desktop_updater:release keygen`). Commit `desktop_updater.keys.json`; keep `release-key.dukey` out of git. Publish `baseUrl` must match `feedUrl` (today both use the **`updates`** branch on `raw.githubusercontent.com`). After changing `feedUrl` in `desktop_updater.keys.json`, re-export `release-key.dukey` and refresh both GitHub secrets.
 
-**Release workflow and `latest/download`:** GitHub only serves `releases/latest/download/…` for the **latest non–pre-release** that is **not a draft**. When **Publish in-app update** is enabled, CI uploads the macOS zip/dmg first, then undrafts the release (`gh release edit --draft=false`) before `desktop_updater` publish so HTTP validation of signed `release.json` URLs succeeds. Do **not** combine **Pre-release** with **Publish in-app update** (the workflow fails fast). Releases without in-app publish stay draft until the final `github_release` job.
+**Why not GitHub Release assets?** `desktop_updater` signs nested paths such as `releases/stable/…/macos/release.json`. Release uploads only support flat asset names (`gh release upload` keeps the basename; the API turns `/` into `.`), so `releases/latest/download/…/release.json` never matches the signed URL. [`tool/macos/desktop-updater-upload-github.sh`](tool/macos/desktop-updater-upload-github.sh) pushes the publish tree to branch `updates` instead.
+
+**Release workflow:** When **Publish in-app update** is enabled, CI still undrafts the GitHub Release before publish (zip/dmg install artifacts). Do **not** combine **Pre-release** with **Publish in-app update** if you rely on draft/latest semantics elsewhere. The updater feed itself is branch-based and does not use `releases/latest/download`.
 
 Local packaging mirrors CI: `tool/macos/package-release-assets.sh` with `BUILD_NAME`, `BUILD_NUMBER`, `TAG`.
 
