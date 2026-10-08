@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 3,
+  "appName": "Mac Dev Cleaner",
+  "items": [
+    {
+      "version": "2026.10.08",
+      "buildNumber": 40373514,
+      "platform": "macos",
+      "channel": "stable",
+      "mandatory": false,
+      "release": "https://raw.githubusercontent.com/naco-src/mac-dev-cleaner/updates/releases/stable/2026.10.08/build-40373514/macos/release.json"
+    }
+  ],
+  "signature": {
+    "algorithm": "ed25519",
+    "publicKeyId": "release-09d9f482daf8fe781a793efc",
+    "value": "qkO1Lxqy6qsY2+R4bCFOFvqx1quiUcg7MiGazPq3AMqyX1OZDyzouwTfWGLIRVk1tiKQKr1NtVU4lUuIFx8MDA=="
+  }
+}
