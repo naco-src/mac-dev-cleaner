@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
 import '../theme/mdc_theme.dart';
+import 'copy_command_button.dart';
 import 'risk_badge.dart';
 
 class ScanItemTile extends StatefulWidget {
@@ -27,6 +28,7 @@ class _ScanItemTileState extends State<ScanItemTile> {
   Widget build(BuildContext context) {
     final item = widget.item;
     final canSelect = item.cleanable && item.preconditionMet;
+    final copyCommand = item.copyableCommand;
 
     final semantic = MdcSemanticColors.of(context);
 
@@ -74,10 +76,17 @@ class _ScanItemTileState extends State<ScanItemTile> {
                   ),
               ],
             ),
-            trailing: IconButton(
-              icon: Icon(expanded ? Icons.expand_less : Icons.expand_more),
-              tooltip: expanded ? 'Hide details' : 'Show paths and details',
-              onPressed: () => setState(() => expanded = !expanded),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (copyCommand != null)
+                  CopyCommandButton(command: copyCommand, dense: true),
+                IconButton(
+                  icon: Icon(expanded ? Icons.expand_less : Icons.expand_more),
+                  tooltip: expanded ? 'Hide details' : 'Show paths and details',
+                  onPressed: () => setState(() => expanded = !expanded),
+                ),
+              ],
             ),
           ),
           if (expanded)

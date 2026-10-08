@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
 import '../controller/cleaner_controller.dart';
+import 'copy_command_button.dart';
 import 'scan_activity_log.dart';
 
 String buildScanDetailsCopyText(CleanerController controller) {
@@ -145,16 +146,27 @@ class _ItemDetailsList extends StatelessWidget {
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
+        final copyCommand = item.copyableCommand;
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: SelectableText(
-            formatScanItemDetail(item, maxPaths: 8),
-            style: TextStyle(
-              fontFamily: 'Menlo',
-              fontSize: 11,
-              height: 1.4,
-              color: theme.colorScheme.onSurface,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (copyCommand != null)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: CopyCommandButton(command: copyCommand, iconSize: 16),
+                ),
+              SelectableText(
+                formatScanItemDetail(item, maxPaths: 8),
+                style: TextStyle(
+                  fontFamily: 'Menlo',
+                  fontSize: 11,
+                  height: 1.4,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
           ),
         );
       },
