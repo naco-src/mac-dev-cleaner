@@ -184,6 +184,29 @@ jobs:
           chmod +x tool/macos/*.sh tool/release-version.sh
           tool/macos/package-release-assets.sh
 
+      - name: Upload assets to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          chmod +x tool/ci/gh-release-upload.sh
+          tool/ci/gh-release-upload.sh "${TAG}" "mac-dev-cleaner-${TAG}-macos-*"
+
+      - name: Publish release for desktop_updater validation
+        if: ${{ inputs.publish_in_app_update }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.prerelease }}" = "true" ]; then
+            echo "In-app update publish cannot use GitHub pre-releases (releases/latest/download excludes them)."
+            echo "Disable Pre-release or disable Publish in-app update. See docs/DEVELOPMENT.md."
+            exit 1
+          fi
+          gh release edit "${TAG}" --draft=false --prerelease=false
+
       - name: Publish desktop_updater feed (arm64, GitHub Release)
         if: ${{ inputs.publish_in_app_update }}
         env:
@@ -206,15 +229,6 @@ jobs:
           export STAGE_DIR="${GITHUB_WORKSPACE}/.macos-staging/arm64"
           chmod +x tool/macos/publish-desktop-updater.sh
           tool/macos/publish-desktop-updater.sh
-
-      - name: Upload assets to GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.meta.outputs.tag }}
-        run: |
-          set -euo pipefail
-          chmod +x tool/ci/gh-release-upload.sh
-          tool/ci/gh-release-upload.sh "${TAG}" "mac-dev-cleaner-${TAG}-macos-*"
 
       - name: Delete workspace from disk
         if: always()
