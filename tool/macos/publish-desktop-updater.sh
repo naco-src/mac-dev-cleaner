@@ -20,6 +20,10 @@ export GITHUB_RELEASE_TAG="${TAG}"
 MDC_FLUTTER="${MDC_FLUTTER:-fvm flutter}"
 read -ra FLUTTER <<< "${MDC_FLUTTER}"
 
+# desktop_updater:release is only a dependency of the Flutter app, not the repo workspace root.
+cd "${APP_DIR}"
+"${FLUTTER[@]}" pub get
+
 if [ -n "${DESKTOP_UPDATER_KEY_BUNDLE_PATH:-}" ]; then
   if [ -z "${DESKTOP_UPDATER_KEY_BUNDLE_PASSPHRASE:-}" ]; then
     echo "Set DESKTOP_UPDATER_KEY_BUNDLE_PASSPHRASE when DESKTOP_UPDATER_KEY_BUNDLE_PATH is set." >&2
@@ -31,9 +35,6 @@ if [ -n "${DESKTOP_UPDATER_KEY_BUNDLE_PATH:-}" ]; then
     --passphrase-env DESKTOP_UPDATER_KEY_BUNDLE_PASSPHRASE
 fi
 
-cd "${APP_DIR}"
-"${FLUTTER[@]}" pub get
-
 existing_archive=""
 if gh release view "${TAG}" --json assets --jq '.assets[]?.name' 2>/dev/null | grep -qx 'app-archive.json'; then
   tmp="$(mktemp -d)"
@@ -42,7 +43,7 @@ if gh release view "${TAG}" --json assets --jq '.assets[]?.name' 2>/dev/null | g
 fi
 
 publish_args=(
-  run desktop_updater:release publish
+  desktop_updater:release publish
   --platform macos
   --project-type manual
   --artifact-root "${artifact_root}"
@@ -62,4 +63,4 @@ case "${DESKTOP_UPDATER_MANDATORY:-false}" in
   true | True | 1 | yes | YES) publish_args+=(--mandatory) ;;
 esac
 
-fvm dart "${publish_args[@]}"
+fvm dart run "${publish_args[@]}"
