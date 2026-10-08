@@ -1,7 +1,7 @@
 name: Release
 
-# Manually build unsigned macOS arm64 + x64 (.zip and .dmg) on self-hosted
-# MYRUNNER (FVM/Flutter/JDK already installed). Publishes a GitHub Release.
+# Manually build macOS (self-hosted MYRUNNER) and/or Linux (ubuntu-latest)
+# packages. Toggle publish_macos / publish_linux when dispatching.
 on:
   workflow_dispatch:
     inputs:
@@ -22,8 +22,33 @@ on:
         required: false
         type: boolean
         default: false
+      publish_macos:
+        description: "Build unsigned macOS arm64 + x64 (.zip and .dmg)."
+        required: false
+        type: boolean
+        default: true
+      publish_linux:
+        description: "Build Linux desktop packages (ubuntu-latest)."
+        required: false
+        type: boolean
+        default: false
+      linux_tarball:
+        description: "Linux asset: tarball of the Flutter bundle."
+        required: false
+        type: boolean
+        default: true
+      linux_deb:
+        description: "Linux asset: .deb (amd64)."
+        required: false
+        type: boolean
+        default: false
+      linux_appimage:
+        description: "Linux asset: AppImage (x86_64)."
+        required: false
+        type: boolean
+        default: false
       publish_in_app_update:
-        description: "Publish desktop_updater feed (app-archive.json + signed zip) to this release."
+        description: "Publish desktop_updater feed (macOS only; requires publish_macos)."
         required: false
         type: boolean
         default: false
@@ -51,7 +76,23 @@ jobs:
       release_name: ${{ steps.meta.outputs.release_name }}
       version_name: ${{ steps.meta.outputs.version_name }}
       build_number: ${{ steps.meta.outputs.build_number }}
+      deb_version: ${{ steps.meta.outputs.deb_version }}
+      flutter_version: ${{ steps.meta.outputs.flutter_version }}
     steps:
+      - name: Validate platform inputs
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.publish_macos }}" != "true" ] \
+            && [ "${{ inputs.publish_linux }}" != "true" ]; then
+            echo "Enable publish_macos and/or publish_linux."
+            exit 1
+          fi
+          if [ "${{ inputs.publish_in_app_update }}" = "true" ] \
+            && [ "${{ inputs.publish_macos }}" != "true" ]; then
+            echo "In-app update publish requires publish_macos."
+            exit 1
+          fi
+
       - name: Reset workspace before checkout
         run: |
           set -euo pipefail
@@ -80,12 +121,13 @@ jobs:
         run: |
           set -euo pipefail
           cd "${GITHUB_WORKSPACE}"
-          if [ ! -f ./tool/release-version.sh ]; then
-            echo "Checkout missing tool/release-version.sh"
+          if [ ! -f ./tool/release-version.sh ] || [ ! -f ./.fvmrc ]; then
+            echo "Checkout missing tool/release-version.sh or .fvmrc"
             ls -la
             exit 1
           fi
           eval "$(./tool/release-version.sh)"
+          flutter_version=$(sed -n 's/.*"flutter"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' .fvmrc | head -n1)
           tag="${INPUT_TAG}"
           if [ -z "${tag}" ]; then
             tag="${TAG}"
@@ -98,11 +140,14 @@ jobs:
           {
             echo "version_name=${BUILD_NAME}"
             echo "build_number=${BUILD_NUMBER}"
+            echo "deb_version=${DEB_VERSION}"
+            echo "flutter_version=${flutter_version}"
             echo "tag=${tag}"
             echo "release_name=${release_name}"
           } >> "$GITHUB_OUTPUT"
           echo "CalVer (build-name): ${BUILD_NAME}"
           echo "Build number: ${BUILD_NUMBER}"
+          echo "Flutter (from .fvmrc): ${flutter_version}"
           echo "Release tag: ${tag}"
 
       - name: Write release notes
@@ -146,6 +191,7 @@ jobs:
   build_macos:
     name: Build macOS
     needs: meta
+    if: ${{ inputs.publish_macos }}
     runs-on: [self-hosted, macOS, MYRUNNER]
     timeout-minutes: 90
     permissions:
@@ -234,9 +280,93 @@ jobs:
         if: always()
         uses: ./.github/actions/cleanup-self-hosted-workspace
 
+  build_linux:
+    name: Build Linux
+    needs: meta
+    if: ${{ inputs.publish_linux }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          clean: true
+
+      - name: Validate Linux format inputs
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.linux_tarball }}" != "true" ] \
+            && [ "${{ inputs.linux_appimage }}" != "true" ] \
+            && [ "${{ inputs.linux_deb }}" != "true" ]; then
+            echo "publish_linux is true but linux_tarball, linux_appimage, and linux_deb are all false."
+            exit 1
+          fi
+
+      - name: Install Linux build dependencies
+        run: |
+          set -euo pipefail
+          packages=(clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev)
+          if [ "${{ inputs.linux_deb }}" = "true" ]; then
+            packages+=(dpkg-dev imagemagick)
+          fi
+          if [ "${{ inputs.linux_appimage }}" = "true" ]; then
+            packages+=(libfuse2 file wget patchelf imagemagick)
+          fi
+          sudo apt-get update
+          sudo apt-get install -y "${packages[@]}"
+
+      - name: Install FVM
+        run: |
+          curl -fsSL https://fvm.app/install.sh | bash
+          echo "$HOME/fvm/default/bin" >> "$GITHUB_PATH"
+
+      - name: Install FVM Flutter SDK (.fvmrc)
+        run: fvm install
+
+      - name: Build and package Linux
+        env:
+          BUILD_NAME: ${{ needs.meta.outputs.version_name }}
+          BUILD_NUMBER: ${{ needs.meta.outputs.build_number }}
+          TAG: ${{ needs.meta.outputs.tag }}
+          OUT_DIR: ${{ github.workspace }}
+          MDC_FLUTTER: fvm flutter
+          LINUX_TARBALL: ${{ inputs.linux_tarball }}
+          LINUX_DEB: ${{ inputs.linux_deb }}
+          LINUX_APPIMAGE: ${{ inputs.linux_appimage }}
+          LINUX_PACKAGING_CACHE: ${{ github.workspace }}/.cache/linux-packaging
+        run: |
+          set -euo pipefail
+          chmod +x tool/linux/package-release-assets.sh \
+            apps/mac_dev_cleaner/tool/linux/*.sh \
+            tool/release-version.sh
+          tool/linux/package-release-assets.sh
+
+      - name: Upload assets to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          chmod +x tool/ci/gh-release-upload.sh
+          tool/ci/gh-release-upload.sh "${TAG}" \
+            "mac-dev-cleaner-${TAG}-linux-*" \
+            "mac-dev-cleaner_*.deb"
+
   github_release:
     name: Publish GitHub Release
-    needs: [meta, build_macos]
+    needs: [meta, build_macos, build_linux]
+    if: >-
+      ${{
+        !cancelled()
+        && (needs.build_macos.result == 'success' || needs.build_macos.result == 'skipped')
+        && (needs.build_linux.result == 'success' || needs.build_linux.result == 'skipped')
+        && (
+          needs.build_macos.result == 'success'
+          || needs.build_linux.result == 'success'
+        )
+      }}
     runs-on: [self-hosted, macOS, MYRUNNER]
     permissions:
       contents: write

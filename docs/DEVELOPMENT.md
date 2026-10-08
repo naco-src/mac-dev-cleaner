@@ -55,7 +55,9 @@ Both workflows are **`workflow_dispatch` only**.
 | --- | --- | --- |
 | **CI (macOS)** | `[self-hosted, macOS, MYRUNNER]` | `fvm install` → `make check` |
 | **CI (Linux)** | `ubuntu-latest` | GTK deps → `fvm install` → `make check` |
-| **Release** | same | meta → build macOS assets → upload → (optional in-app publish) → finalize release |
+| **Release** | MYRUNNER + `ubuntu-latest` | meta → optional **publish_macos** / **publish_linux** jobs → finalize release |
+
+**Release workflow inputs:** enable **publish_macos** (default on) for arm64/x64 `.zip`/`.dmg` on MYRUNNER; **publish_linux** for Linux on `ubuntu-latest` with **linux_tarball** (default on), **linux_deb**, and/or **linux_appimage**. At least one platform is required. **Publish in-app update** remains macOS-only and requires **publish_macos**.
 
 Release uses `MDC_FLUTTER=fvm flutter`, workspace cleanup actions under `.github/actions/`, `tool/ci/gh-release-upload.sh`, and `tool/ci/generate-release-notes.sh` (commit subjects since the previous `v*` tag when release notes are left blank).
 
@@ -72,7 +74,10 @@ Generate keys once in `apps/mac_dev_cleaner` (`desktop_updater.yaml` + `dart run
 
 **Private source repo:** `raw.githubusercontent.com` is unauthenticated; a **private** app repo returns 404 for the feed even after a successful push to branch `updates`. **Publish in-app update will fail validation** until [O6](../product/decisions/open-deferred.md) is implemented — see [in-app-updates-hosting.md](../product/plan/in-app-updates-hosting.md) (public updates mirror repo; not built yet).
 
-Local packaging mirrors CI: `tool/macos/package-release-assets.sh` with `BUILD_NAME`, `BUILD_NUMBER`, `TAG`.
+Local packaging mirrors CI:
+
+- macOS: `BUILD_NAME`, `BUILD_NUMBER`, `TAG`, `OUT_DIR` → `tool/macos/package-release-assets.sh`
+- Linux: same env vars plus optional `LINUX_TARBALL` / `LINUX_DEB` / `LINUX_APPIMAGE` → `tool/linux/package-release-assets.sh` (needs GTK dev packages on the host)
 
 ## Project conventions
 

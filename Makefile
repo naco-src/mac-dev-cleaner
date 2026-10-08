@@ -16,7 +16,7 @@ FLUTTER_RELEASE_FLAGS := --build-name=$(BUILD_NAME) --build-number=$(BUILD_NUMBE
 
 .PHONY: help bootstrap get test analyze clean check
 .PHONY: cli-scan cli-plan-safe cli-clean-safe cli-doctor cli-history
-.PHONY: run-app build-macos build-macos-debug macos-release macos-packaging install-cli
+.PHONY: run-app build-macos build-macos-debug macos-release macos-packaging linux-packaging install-cli
 .PHONY: release-version
 
 help:
@@ -48,6 +48,7 @@ help:
 	@echo "  make run-app"
 	@echo "  make macos-release     release .app with BUILD_NAME/BUILD_NUMBER"
 	@echo "  make macos-packaging   arm64+x64 .zip/.dmg for RELEASE_TAG"
+	@echo "  make linux-packaging   Linux tarball (and optional deb/appimage via env)"
 	@echo "  make build-macos       alias for macos-release"
 	@echo "  make build-macos-debug"
 	@echo ""
@@ -76,6 +77,8 @@ clean:
 	rm -rf "$(ROOT)/apps/mac_dev_cleaner/.dart_tool"
 	rm -rf "$(ROOT)/.macos-staging"
 	rm -f "$(ROOT)"/mac-dev-cleaner-*-macos-*.{zip,dmg}
+	rm -f "$(ROOT)"/mac-dev-cleaner-*-linux-*
+	rm -f "$(ROOT)"/mac-dev-cleaner_*.deb
 
 cli-scan:
 	@$(SCRIPTS)/mdc.sh scan
@@ -108,6 +111,14 @@ macos-packaging:
 	BUILD_NAME=$(BUILD_NAME) BUILD_NUMBER=$(BUILD_NUMBER) \
 		TAG=$(RELEASE_TAG) OUT_DIR=$(CURDIR) \
 		./tool/macos/package-release-assets.sh
+
+linux-packaging:
+	BUILD_NAME=$(BUILD_NAME) BUILD_NUMBER=$(BUILD_NUMBER) \
+		TAG=$(RELEASE_TAG) OUT_DIR=$(CURDIR) \
+		LINUX_TARBALL=$${LINUX_TARBALL:-true} \
+		LINUX_DEB=$${LINUX_DEB:-false} \
+		LINUX_APPIMAGE=$${LINUX_APPIMAGE:-false} \
+		./tool/linux/package-release-assets.sh
 
 build-macos: macos-release
 

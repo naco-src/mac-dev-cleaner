@@ -95,7 +95,7 @@ Full path/command catalog: [plan/PLAN.md](./plan/PLAN.md) §5.
 - Cleaning non-developer categories (Photos, Mail, system caches outside dev rules).
 - Automatic scheduled clean without user review (optional future: scan-only report).
 - Windows support (core + UI).
-- Linux GitHub Release / in-app update artifacts (macOS-only today).
+- Linux in-app update artifacts (macOS-only today; Linux builds via Release workflow tarball/deb/AppImage).
 
 ## Success metrics (informal)
 

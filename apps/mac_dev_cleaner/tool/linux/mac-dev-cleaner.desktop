@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Mac Dev Cleaner
+Comment=Scan and clean developer caches safely
+Exec=mac_dev_cleaner
+Icon=io.github.nguyenhoangvannha.macDevCleaner
+Categories=Utility;Development;
+StartupWMClass=io.github.nguyenhoangvannha.macDevCleaner
+Terminal=false
