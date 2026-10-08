@@ -116,7 +116,7 @@ linux-packaging:
 	BUILD_NAME=$(BUILD_NAME) BUILD_NUMBER=$(BUILD_NUMBER) \
 		TAG=$(RELEASE_TAG) OUT_DIR=$(CURDIR) \
 		LINUX_TARBALL=$${LINUX_TARBALL:-true} \
-		LINUX_DEB=$${LINUX_DEB:-false} \
+		LINUX_DEB=$${LINUX_DEB:-true} \
 		LINUX_APPIMAGE=$${LINUX_APPIMAGE:-false} \
 		./tool/linux/package-release-assets.sh
 

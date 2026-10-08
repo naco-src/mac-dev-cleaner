@@ -57,7 +57,7 @@ Both workflows are **`workflow_dispatch` only**.
 | **CI (Linux)** | `ubuntu-latest` | GTK deps → `fvm install` → `make check` |
 | **Release** | MYRUNNER + `ubuntu-latest` | meta → optional **publish_macos** / **publish_linux** jobs → finalize release |
 
-**Release workflow inputs:** enable **publish_macos** (default on) for arm64/x64 `.zip`/`.dmg` on MYRUNNER; **publish_linux** for Linux on `ubuntu-latest` with **linux_tarball** (default on), **linux_deb**, and/or **linux_appimage**. At least one platform is required. **Publish in-app update** remains macOS-only and requires **publish_macos**.
+**Release workflow inputs:** enable **publish_macos** (default on) for arm64/x64 `.zip`/`.dmg` on MYRUNNER; **publish_linux** for Linux on `ubuntu-latest` with **linux_tarball** and **linux_deb** (both default on) and/or **linux_appimage**. At least one platform is required. **Publish in-app update** remains macOS-only and requires **publish_macos**.
 
 Release uses `MDC_FLUTTER=fvm flutter`, workspace cleanup actions under `.github/actions/`, `tool/ci/gh-release-upload.sh`, and `tool/ci/generate-release-notes.sh` (commit subjects since the previous `v*` tag when release notes are left blank).
 

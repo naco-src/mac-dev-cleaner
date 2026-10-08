@@ -41,7 +41,7 @@ on:
         description: "Linux asset: .deb (amd64)."
         required: false
         type: boolean
-        default: false
+        default: true
       linux_appimage:
         description: "Linux asset: AppImage (x86_64)."
         required: false
