@@ -14,12 +14,8 @@ class DoctorScreen extends StatefulWidget {
 }
 
 class _DoctorScreenState extends State<DoctorScreen> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CleanerController>().loadDoctor();
-    });
+  void _startDoctor(CleanerController controller) {
+    controller.loadDoctor();
   }
 
   @override
@@ -62,12 +58,21 @@ class _DoctorScreenState extends State<DoctorScreen> {
                         );
                       },
                     ),
-                  OutlinedButton(
-                    onPressed: controller.doctorLoading
-                        ? null
-                        : () => controller.loadDoctor(),
-                    child: const Text('Run again'),
-                  ),
+                  if (hasRun)
+                    OutlinedButton(
+                      onPressed: controller.doctorLoading
+                          ? null
+                          : () => _startDoctor(controller),
+                      child: const Text('Run again'),
+                    )
+                  else
+                    FilledButton.icon(
+                      onPressed: controller.doctorLoading
+                          ? null
+                          : () => _startDoctor(controller),
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('Start scan'),
+                    ),
                 ],
               ),
             ),
@@ -83,7 +88,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
                       child: Text(
                         controller.doctorLoading
                             ? 'Running checks…'
-                            : 'Tap Run again to start.',
+                            : 'Tap Start scan to run preflight checks.',
                         style: theme.textTheme.bodyLarge,
                       ),
                     ),
