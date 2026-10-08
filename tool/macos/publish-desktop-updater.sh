@@ -38,10 +38,20 @@ if [ -n "${DESKTOP_UPDATER_KEY_BUNDLE_PATH:-}" ]; then
 fi
 
 existing_archive=""
-if gh release view "${TAG}" --json assets --jq '.assets[]?.name' 2>/dev/null | grep -qx 'app-archive.json'; then
-  tmp="$(mktemp -d)"
-  gh release download "${TAG}" --pattern 'app-archive.json' --dir "${tmp}"
-  existing_archive="${tmp}/app-archive.json"
+archive_tmp="$(mktemp -d)"
+feed_url="${base_url%/}/app-archive.json"
+if curl -fsSL "${feed_url}" -o "${archive_tmp}/app-archive.json" 2>/dev/null; then
+  existing_archive="${archive_tmp}/app-archive.json"
+elif command -v gh >/dev/null 2>&1; then
+  updates_branch="${DESKTOP_UPDATER_UPDATES_BRANCH:-updates}"
+  updates_repo="${DESKTOP_UPDATER_UPDATES_REPOSITORY:-${GITHUB_REPOSITORY}}"
+  if gh api "repos/${updates_repo}/contents/app-archive.json?ref=${updates_branch}" \
+    --jq -r .content 2>/dev/null \
+    | tr -d '\n' \
+    | base64 --decode >"${archive_tmp}/app-archive.json" \
+    && [ -s "${archive_tmp}/app-archive.json" ]; then
+    existing_archive="${archive_tmp}/app-archive.json"
+  fi
 fi
 
 publish_args=(
