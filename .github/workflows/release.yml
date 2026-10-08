@@ -1,0 +1,158 @@
+name: Release
+
+# Build unsigned macOS arm64 + x64 (.zip and .dmg) and publish a GitHub Release.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Git tag. Leave blank for v<CalVer>+<build> from tool/release-version.sh."
+        required: false
+        type: string
+      release_name:
+        description: "Release title. Defaults to “Mac Dev Cleaner · {tag}”."
+        required: false
+        type: string
+      notes:
+        description: "Release notes body. Leave blank for a short auto message."
+        required: false
+        type: string
+      prerelease:
+        description: "Mark the GitHub Release as a pre-release."
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  meta:
+    name: Resolve metadata
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      release_name: ${{ steps.meta.outputs.release_name }}
+      version_name: ${{ steps.meta.outputs.version_name }}
+      build_number: ${{ steps.meta.outputs.build_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve build metadata
+        id: meta
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_RELEASE_NAME: ${{ inputs.release_name }}
+        run: |
+          set -euo pipefail
+          eval "$(./tool/release-version.sh)"
+          tag="${INPUT_TAG}"
+          if [ -z "${tag}" ]; then
+            tag="${TAG}"
+          fi
+          if [ -n "${INPUT_RELEASE_NAME}" ]; then
+            release_name="${INPUT_RELEASE_NAME}"
+          else
+            release_name="Mac Dev Cleaner · ${tag}"
+          fi
+          {
+            echo "version_name=${BUILD_NAME}"
+            echo "build_number=${BUILD_NUMBER}"
+            echo "tag=${tag}"
+            echo "release_name=${release_name}"
+          } >> "$GITHUB_OUTPUT"
+          echo "CalVer (build-name): ${BUILD_NAME}"
+          echo "Build number: ${BUILD_NUMBER}"
+          echo "Release tag: ${tag}"
+
+      - name: Write release notes
+        env:
+          INPUT_NOTES: ${{ inputs.notes }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_NOTES}" ]; then
+            printf '%s\n' "${INPUT_NOTES}" > "${RUNNER_TEMP}/release-notes.txt"
+          else
+            printf 'Mac Dev Cleaner macOS release %s\n\nBuilt from commit %s\n' \
+              "${TAG}" "${GITHUB_SHA}" > "${RUNNER_TEMP}/release-notes.txt"
+          fi
+
+      - name: Create draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          RELEASE_NAME: ${{ steps.meta.outputs.release_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists; refreshing notes"
+            gh release edit "${TAG}" --notes-file "${RUNNER_TEMP}/release-notes.txt"
+            exit 0
+          fi
+          gh release create "${TAG}" \
+            --title "${RELEASE_NAME}" \
+            --draft \
+            --notes-file "${RUNNER_TEMP}/release-notes.txt"
+
+  build_macos:
+    name: Build macOS
+    needs: meta
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build and package macOS (arm64 + x64)
+        env:
+          BUILD_NAME: ${{ needs.meta.outputs.version_name }}
+          BUILD_NUMBER: ${{ needs.meta.outputs.build_number }}
+          TAG: ${{ needs.meta.outputs.tag }}
+          OUT_DIR: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          chmod +x tool/macos/*.sh tool/release-version.sh
+          tool/macos/package-release-assets.sh
+
+      - name: Upload assets to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          chmod +x tool/ci/gh-release-upload.sh
+          tool/ci/gh-release-upload.sh "${TAG}" "mac-dev-cleaner-${TAG}-macos-*"
+
+  github_release:
+    name: Publish GitHub Release
+    needs: [meta, build_macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Finalize GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.meta.outputs.tag }}
+          RELEASE_NAME: ${{ needs.meta.outputs.release_name }}
+        run: |
+          set -euo pipefail
+          args=(
+            release edit "${TAG}"
+            --draft=false
+            --title "${RELEASE_NAME}"
+          )
+          if [ "${{ inputs.prerelease }}" = "true" ]; then
+            args+=(--prerelease)
+          else
+            args+=(--prerelease=false)
+          fi
+          gh "${args[@]}"
+          gh release view "${TAG}" --json assets --jq '.assets | length'

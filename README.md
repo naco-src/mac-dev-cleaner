@@ -64,3 +64,19 @@ make run-app
 Run `make help` for targets (`test`, `analyze`, `check`, `mdc ARGS='…'`, etc.). Scripts live in [`scripts/`](scripts/).
 
 Grant **Full Disk Access** to “Mac Dev Cleaner” when prompted (toolbar info icon to reopen the guide).
+
+## Release (macOS)
+
+Versioning uses the same **CalVer + build number** pattern as LaneLift via [`tool/release-version.sh`](tool/release-version.sh):
+
+- **BUILD_NAME** — UTC `YYYY.MM.DD` (Flutter `CFBundleShortVersionString`)
+- **BUILD_NUMBER** — minutes since epoch × 100 + CI run mod 100
+- **TAG** — `v{BUILD_NAME}+{BUILD_NUMBER}` unless overridden
+
+```bash
+make release-version    # print BUILD_NAME, BUILD_NUMBER, TAG
+make macos-release      # signed/unsigned Release .app locally
+make macos-packaging    # arm64 + x64 .zip and .dmg at repo root
+```
+
+GitHub: **Actions → Release** (workflow_dispatch) builds on `macos-latest`, uploads assets, and publishes the release. Requires `gh` on runners (preinstalled on GitHub-hosted).
