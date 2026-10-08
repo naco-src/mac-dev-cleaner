@@ -3,6 +3,7 @@ import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
 import '../theme/mdc_theme.dart';
 import 'copy_command_button.dart';
+import 'deletion_guide_dialog.dart';
 import 'risk_badge.dart';
 import 'scan_item_subdetail_list.dart';
 
@@ -89,6 +90,7 @@ class _ScanItemTileState extends State<ScanItemTile> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                DeletionGuideIconButton(item: item),
                 if (copyParts.isNotEmpty)
                   CopyCommandButton(
                     itemName: item.name,

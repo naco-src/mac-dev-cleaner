@@ -5,6 +5,8 @@ export 'src/io/process_runner.dart';
 export 'src/mac_dev_cleaner.dart';
 export 'src/models/clean_action.dart';
 export 'src/models/copy_command_part.dart';
+export 'src/models/deletion_guide.dart';
+export 'src/util/deletion_guide_for.dart';
 export 'src/models/scan_item_subdetail.dart';
 export 'src/util/copy_command_parts.dart';
 export 'src/util/scan_item_subdetails.dart';

@@ -4,6 +4,7 @@ import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
 import '../theme/mdc_theme.dart';
 import 'copy_command_button.dart';
+import 'deletion_guide_dialog.dart';
 
 /// Expanded body: metadata plus one row per sub-target.
 class ScanItemExpandedDetails extends StatelessWidget {
@@ -22,15 +23,21 @@ class ScanItemExpandedDetails extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (copyParts.isNotEmpty)
-            Align(
-              alignment: Alignment.centerRight,
-              child: CopyCommandButton(
-                itemName: item.name,
-                parts: copyParts,
-                iconSize: 16,
-              ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DeletionGuideIconButton(item: item),
+                if (copyParts.isNotEmpty)
+                  CopyCommandButton(
+                    itemName: item.name,
+                    parts: copyParts,
+                    iconSize: 16,
+                  ),
+              ],
             ),
+          ),
           Text('ID: ${item.id}', style: context.monoLabelSmall),
           if (item.detail != null) ...[
             const SizedBox(height: 4),
