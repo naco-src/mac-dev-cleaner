@@ -12,6 +12,7 @@ import '../io/process_check.dart';
 import '../models/clean_action.dart';
 import '../models/enums.dart';
 import '../models/scan_item.dart';
+import '../util/parallel.dart';
 import '../util/paths.dart';
 import 'scan_log.dart';
 import 'size_scanner.dart';
@@ -21,12 +22,18 @@ class ScanService {
     required this.fileSystem,
     required this.commandRunner,
     MdcPaths? paths,
+    int? scanConcurrency,
   }) : paths = paths ?? MdcPaths(),
-       _sizes = SizeScanner(fileSystem);
+       scanConcurrency = scanConcurrency ?? defaultScanConcurrency(),
+       _sizes = SizeScanner(
+         fileSystem,
+         concurrency: scanConcurrency ?? defaultScanConcurrency(),
+       );
 
   final FileSystem fileSystem;
   final ProcessRunner commandRunner;
   final MdcPaths paths;
+  final int scanConcurrency;
   final SizeScanner _sizes;
 
   Future<List<ScanItem>> scanAll({ScanProgressCallback? onProgress}) async {
@@ -79,23 +86,21 @@ class ScanService {
     }
 
     final refs = projectRefs;
-    items.addAll(await phase('Safe cleanup targets', _safeRules));
-    items.addAll(
-      await phase(
-        'Android (NDK, images, pub)',
-        () => _conditionalAndroid(refs),
-      ),
+    log(
+      ScanLogLevel.info,
+      'Running scan phases in parallel (concurrency: $scanConcurrency)',
     );
-    items.addAll(
-      await phase('Xcode (simulators, archives)', _conditionalXcode),
-    );
-    items.addAll(await phase('IDE & browser caches', _ideAndBrowser));
-    items.addAll(
-      await phase('Stale project artifacts', () => _projectSweeper(refs)),
-    );
-    items.addAll(
-      await phase('Protected totals (report only)', _protectedReports),
-    );
+    final phaseResults = await Future.wait([
+      phase('Safe cleanup targets', _safeRules),
+      phase('Android (NDK, images, pub)', () => _conditionalAndroid(refs)),
+      phase('Xcode (simulators, archives)', _conditionalXcode),
+      phase('IDE & browser caches', _ideAndBrowser),
+      phase('Stale project artifacts', () => _projectSweeper(refs)),
+      phase('Protected totals (report only)', _protectedReports),
+    ]);
+    for (final chunk in phaseResults) {
+      items.addAll(chunk);
+    }
 
     items.sort((a, b) => b.sizeBytes.compareTo(a.sizeBytes));
     log(ScanLogLevel.info, 'Scan finished — ${items.length} entries');
@@ -238,11 +243,17 @@ class ScanService {
       );
     }
 
-    for (final gradlePath in [
+    final gradlePaths = [
       p.join(paths.gradleHome, 'caches'),
       p.join(paths.gradleHome, 'daemon'),
-    ]) {
-      final size = await _sizes.directorySize(gradlePath);
+    ];
+    final gradleSizes = await mapConcurrent(
+      gradlePaths,
+      (gradlePath) async =>
+          (gradlePath, await _sizes.directorySize(gradlePath)),
+      concurrency: scanConcurrency,
+    );
+    for (final (gradlePath, size) in gradleSizes) {
       if (size > 0) {
         items.add(
           ScanItem(
@@ -307,42 +318,36 @@ class ScanService {
       'logs',
       'Logs',
     ];
-    final items = <ScanItem>[];
-
-    for (final editor in editors) {
+    final editorItems = await mapConcurrent(editors, (editor) async {
       final support = p.join(paths.applicationSupport, editor.$2);
       if (!fileSystem.directory(support).existsSync()) {
-        continue;
+        return null;
       }
       final cachePaths = _sizes.existingChildPaths(support, cacheFolderNames);
       final size = await _sizes.pathsTotal(cachePaths);
       if (size == 0) {
-        continue;
+        return null;
       }
       final running = await isAnyProcessRunning(commandRunner, editor.$3);
-      items.add(
-        ScanItem(
-          id: '${editor.$1}-caches',
-          name: '${editor.$2} caches',
-          group: RuleGroup.ide,
-          risk: RiskLevel.safe,
-          explain: 'Editor cache folders only; settings and extensions stay.',
-          regenerates: RegeneratesKind.automatically,
-          sizeBytes: size,
+      return ScanItem(
+        id: '${editor.$1}-caches',
+        name: '${editor.$2} caches',
+        group: RuleGroup.ide,
+        risk: RiskLevel.safe,
+        explain: 'Editor cache folders only; settings and extensions stay.',
+        regenerates: RegeneratesKind.automatically,
+        sizeBytes: size,
+        paths: cachePaths,
+        selectedByDefault: !running,
+        preconditionMet: !running,
+        preconditionHint: running ? 'Quit ${editor.$2} before cleaning.' : null,
+        cleanAction: CleanAction(
+          method: CleanMethod.moveToTrash,
           paths: cachePaths,
-          selectedByDefault: !running,
-          preconditionMet: !running,
-          preconditionHint: running
-              ? 'Quit ${editor.$2} before cleaning.'
-              : null,
-          cleanAction: CleanAction(
-            method: CleanMethod.moveToTrash,
-            paths: cachePaths,
-          ),
         ),
       );
-    }
-    return items;
+    }, concurrency: scanConcurrency);
+    return editorItems.whereType<ScanItem>().toList();
   }
 
   Future<List<ScanItem>> _userLogs() async {
@@ -636,41 +641,49 @@ class ScanService {
           .directory(chromeRoot)
           .listSync()
           .where((e) => fileSystem.isDirectorySync(e.path));
-      for (final profile in profiles) {
-        if (!p.basename(profile.path).startsWith('Profile') &&
-            p.basename(profile.path) != 'Default') {
-          continue;
-        }
-        final cachePaths = _sizes.existingChildPaths(profile.path, [
+      final profilePaths = profiles
+          .map((e) => e.path)
+          .where(
+            (path) =>
+                p.basename(path).startsWith('Profile') ||
+                p.basename(path) == 'Default',
+          )
+          .toList();
+      final chromeRunning = await isProcessRunning(
+        commandRunner,
+        'Google Chrome',
+      );
+      final profileItems = await mapConcurrent(profilePaths, (
+        profilePath,
+      ) async {
+        final cachePaths = _sizes.existingChildPaths(profilePath, [
           'Cache',
           'Code Cache',
           p.join('Service Worker', 'CacheStorage'),
         ]);
         final size = await _sizes.pathsTotal(cachePaths);
         if (size == 0) {
-          continue;
+          return null;
         }
-        final running = await isProcessRunning(commandRunner, 'Google Chrome');
-        items.add(
-          ScanItem(
-            id: 'chrome-cache-${p.basename(profile.path)}',
-            name: 'Chrome ${p.basename(profile.path)} caches',
-            group: RuleGroup.browser,
-            risk: RiskLevel.conditional,
-            explain: 'Cache only; cookies and logins untouched.',
-            regenerates: RegeneratesKind.automatically,
-            sizeBytes: size,
+        return ScanItem(
+          id: 'chrome-cache-${p.basename(profilePath)}',
+          name: 'Chrome ${p.basename(profilePath)} caches',
+          group: RuleGroup.browser,
+          risk: RiskLevel.conditional,
+          explain: 'Cache only; cookies and logins untouched.',
+          regenerates: RegeneratesKind.automatically,
+          sizeBytes: size,
+          paths: cachePaths,
+          selectedByDefault: false,
+          preconditionMet: !chromeRunning,
+          preconditionHint: chromeRunning ? 'Quit Google Chrome first.' : null,
+          cleanAction: CleanAction(
+            method: CleanMethod.moveToTrash,
             paths: cachePaths,
-            selectedByDefault: false,
-            preconditionMet: !running,
-            preconditionHint: running ? 'Quit Google Chrome first.' : null,
-            cleanAction: CleanAction(
-              method: CleanMethod.moveToTrash,
-              paths: cachePaths,
-            ),
           ),
         );
-      }
+      }, concurrency: scanConcurrency);
+      items.addAll(profileItems.whereType<ScanItem>());
     }
 
     final jetbrains = p.join(paths.applicationSupport, 'JetBrains');
@@ -712,24 +725,25 @@ class ScanService {
   }
 
   Future<List<ScanItem>> _projectSweeper(ProjectRefSnapshot refs) async {
-    final items = <ScanItem>[];
     final staleDays = 30;
     final cutoff = DateTime.now().subtract(Duration(days: staleDays));
     final artifactNames = ['build', '.dart_tool', 'node_modules'];
 
-    for (final project in refs.projectPaths) {
+    final projectItems = await mapConcurrent(refs.projectPaths, (
+      project,
+    ) async {
       final dir = fileSystem.directory(project);
       if (!dir.existsSync()) {
-        continue;
+        return null;
       }
-      DateTime? modified;
+      DateTime modified;
       try {
         modified = dir.statSync().modified;
       } on FileSystemException {
-        continue;
+        return null;
       }
       if (modified.isAfter(cutoff)) {
-        continue;
+        return null;
       }
       final paths = <String>[];
       for (final name in artifactNames) {
@@ -747,34 +761,29 @@ class ScanService {
         paths.add(androidGradle);
       }
       if (paths.isEmpty) {
-        continue;
+        return null;
       }
       final size = await _sizes.pathsTotal(paths);
       if (size == 0) {
-        continue;
+        return null;
       }
       final id = 'project-${_hashPath(project)}';
-      items.add(
-        ScanItem(
-          id: id,
-          name: 'Stale project artifacts (${p.basename(project)})',
-          group: RuleGroup.projects,
-          risk: RiskLevel.conditional,
-          explain:
-              'Project not modified in $staleDays+ days; build outputs only.',
-          regenerates: RegeneratesKind.onNextBuild,
-          sizeBytes: size,
-          paths: paths,
-          selectedByDefault: false,
-          detail: project,
-          cleanAction: CleanAction(
-            method: CleanMethod.moveToTrash,
-            paths: paths,
-          ),
-        ),
+      return ScanItem(
+        id: id,
+        name: 'Stale project artifacts (${p.basename(project)})',
+        group: RuleGroup.projects,
+        risk: RiskLevel.conditional,
+        explain:
+            'Project not modified in $staleDays+ days; build outputs only.',
+        regenerates: RegeneratesKind.onNextBuild,
+        sizeBytes: size,
+        paths: paths,
+        selectedByDefault: false,
+        detail: project,
+        cleanAction: CleanAction(method: CleanMethod.moveToTrash, paths: paths),
       );
-    }
-    return items;
+    }, concurrency: scanConcurrency);
+    return projectItems.whereType<ScanItem>().toList();
   }
 
   Future<List<ScanItem>> _protectedReports() async {
@@ -786,9 +795,13 @@ class ScanService {
       ),
       ('android-sdk-total', 'Android SDK (report only)', paths.androidSdk),
     ];
+    final sized = await mapConcurrent(
+      reports,
+      (r) async => (r, await _sizes.directorySize(r.$3)),
+      concurrency: scanConcurrency,
+    );
     final items = <ScanItem>[];
-    for (final r in reports) {
-      final size = await _sizes.directorySize(r.$3);
+    for (final (r, size) in sized) {
       if (size == 0) {
         continue;
       }

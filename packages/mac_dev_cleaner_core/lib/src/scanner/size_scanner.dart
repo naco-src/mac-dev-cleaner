@@ -1,10 +1,14 @@
 import 'package:file/file.dart';
 
+import '../util/parallel.dart';
+
 /// Computes directory sizes without following symlinks; stays on one device when possible.
 class SizeScanner {
-  SizeScanner(this.fileSystem);
+  SizeScanner(this.fileSystem, {int? concurrency})
+    : concurrency = concurrency ?? defaultScanConcurrency();
 
   final FileSystem fileSystem;
+  final int concurrency;
 
   Future<int> directorySize(String path) async {
     final entity = fileSystem.directory(path);
@@ -15,42 +19,60 @@ class SizeScanner {
   }
 
   Future<int> pathsTotal(Iterable<String> paths) async {
-    var total = 0;
-    for (final path in paths) {
-      final dir = fileSystem.directory(path);
-      final file = fileSystem.file(path);
-      if (dir.existsSync()) {
-        total += await _sizeOf(dir);
-      } else if (file.existsSync()) {
-        total += file.lengthSync();
-      }
+    final list = paths.toList();
+    if (list.isEmpty) {
+      return 0;
     }
-    return total;
+    final sizes = await mapConcurrent(
+      list,
+      _pathSize,
+      concurrency: concurrency,
+    );
+    return sizes.fold<int>(0, (sum, n) => sum + n);
   }
 
-  Future<int> globContentsSize(String directory, List<String> childNames) async {
-    var total = 0;
+  Future<int> _pathSize(String path) async {
+    final dir = fileSystem.directory(path);
+    final file = fileSystem.file(path);
+    if (dir.existsSync()) {
+      return _sizeOf(dir);
+    }
+    if (file.existsSync()) {
+      return file.lengthSync();
+    }
+    return 0;
+  }
+
+  Future<int> globContentsSize(
+    String directory,
+    List<String> childNames,
+  ) async {
     final dir = fileSystem.directory(directory);
     if (!dir.existsSync()) {
       return 0;
     }
-    for (final name in childNames) {
+    final sizes = await mapConcurrent(childNames, (name) async {
       final child = fileSystem.path.join(directory, name);
       final d = fileSystem.directory(child);
       final f = fileSystem.file(child);
       if (d.existsSync()) {
-        total += await _sizeOf(d);
-      } else if (f.existsSync()) {
-        total += f.lengthSync();
+        return _sizeOf(d);
       }
-    }
-    return total;
+      if (f.existsSync()) {
+        return f.lengthSync();
+      }
+      return 0;
+    }, concurrency: concurrency);
+    return sizes.fold<int>(0, (sum, n) => sum + n);
   }
 
   Future<int> _sizeOf(Directory directory) async {
     var total = 0;
     try {
-      await for (final entity in directory.list(recursive: true, followLinks: false)) {
+      await for (final entity in directory.list(
+        recursive: true,
+        followLinks: false,
+      )) {
         if (entity is! File) {
           continue;
         }
