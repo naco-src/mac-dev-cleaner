@@ -28,7 +28,7 @@ class _ScanItemTileState extends State<ScanItemTile> {
   Widget build(BuildContext context) {
     final item = widget.item;
     final canSelect = item.cleanable && item.preconditionMet;
-    final copyCommand = item.copyableCommand;
+    final copyParts = item.copyCommandParts;
 
     final semantic = MdcSemanticColors.of(context);
 
@@ -79,8 +79,12 @@ class _ScanItemTileState extends State<ScanItemTile> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (copyCommand != null)
-                  CopyCommandButton(command: copyCommand, dense: true),
+                if (copyParts.isNotEmpty)
+                  CopyCommandButton(
+                    itemName: item.name,
+                    parts: copyParts,
+                    dense: true,
+                  ),
                 IconButton(
                   icon: Icon(expanded ? Icons.expand_less : Icons.expand_more),
                   tooltip: expanded ? 'Hide details' : 'Show paths and details',

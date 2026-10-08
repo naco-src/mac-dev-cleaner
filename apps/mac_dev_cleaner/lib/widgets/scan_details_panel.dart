@@ -146,16 +146,20 @@ class _ItemDetailsList extends StatelessWidget {
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
-        final copyCommand = item.copyableCommand;
+        final copyParts = item.copyCommandParts;
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (copyCommand != null)
+              if (copyParts.isNotEmpty)
                 Align(
                   alignment: Alignment.centerRight,
-                  child: CopyCommandButton(command: copyCommand, iconSize: 16),
+                  child: CopyCommandButton(
+                    itemName: item.name,
+                    parts: copyParts,
+                    iconSize: 16,
+                  ),
                 ),
               SelectableText(
                 formatScanItemDetail(item, maxPaths: 8),

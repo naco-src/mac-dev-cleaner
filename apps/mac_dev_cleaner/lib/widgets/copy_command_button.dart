@@ -1,37 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
-/// Copies [command] to the clipboard and shows a snackbar.
+import 'copy_command_picker.dart';
+
+/// Copies command line(s) for a scan item; opens a picker when there are several.
 class CopyCommandButton extends StatelessWidget {
   const CopyCommandButton({
     super.key,
-    required this.command,
+    required this.itemName,
+    required this.parts,
     this.iconSize = 20,
     this.dense = false,
   });
 
-  final String command;
+  final String itemName;
+  final List<CopyCommandPart> parts;
   final double iconSize;
   final bool dense;
 
   @override
   Widget build(BuildContext context) {
+    if (parts.isEmpty) return const SizedBox.shrink();
+
     if (dense) {
       return IconButton(
         icon: Icon(Icons.copy, size: iconSize),
-        tooltip: 'Copy command',
-        onPressed: () => _copy(context),
+        tooltip: parts.length > 1 ? 'Copy command…' : 'Copy command',
+        onPressed: () => _onPressed(context),
       );
     }
     return TextButton.icon(
       icon: Icon(Icons.copy, size: iconSize),
-      label: const Text('Copy command'),
-      onPressed: () => _copy(context),
+      label: Text(parts.length > 1 ? 'Copy command…' : 'Copy command'),
+      onPressed: () => _onPressed(context),
     );
   }
 
-  void _copy(BuildContext context) {
-    Clipboard.setData(ClipboardData(text: command));
+  void _onPressed(BuildContext context) {
+    if (parts.length == 1) {
+      _copy(context, parts.first.command);
+      return;
+    }
+    showCopyCommandPicker(context, itemName: itemName, parts: parts);
+  }
+
+  void _copy(BuildContext context, String text) {
+    Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Copied command to clipboard')),
     );

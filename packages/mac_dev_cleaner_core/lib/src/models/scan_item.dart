@@ -35,8 +35,6 @@ class ScanItem {
   bool get cleanable =>
       cleanAction != null && risk != RiskLevel.protected && preconditionMet;
 
-  String? get copyableCommand => cleanAction?.copyableCommand;
-
   ScanItem copyWith({
     int? sizeBytes,
     CleanAction? cleanAction,

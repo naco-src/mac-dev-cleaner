@@ -4,6 +4,8 @@ export 'src/doctor/doctor_service.dart';
 export 'src/io/process_runner.dart';
 export 'src/mac_dev_cleaner.dart';
 export 'src/models/clean_action.dart';
+export 'src/models/copy_command_part.dart';
+export 'src/util/copy_command_parts.dart';
 export 'src/models/enums.dart';
 export 'src/models/plan.dart';
 export 'src/models/scan_item.dart';
