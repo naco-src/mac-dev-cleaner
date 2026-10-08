@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../controller/cleaner_controller.dart';
 import '../widgets/plan_summary_dialog.dart';
+import '../widgets/scan_details_panel.dart';
 import '../widgets/scan_item_tile.dart';
-import '../widgets/scan_activity_log.dart';
 import '../widgets/scan_treemap_view.dart';
 
 enum _ScanViewMode { list, treemap }
@@ -17,15 +17,34 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   final _searchController = TextEditingController();
   bool _permanentDelete = false;
   _ScanViewMode _viewMode = _ScanViewMode.list;
+  late final TabController _mainTabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _mainTabController = TabController(length: 2, vsync: this)
+      ..addListener(() {
+        if (!_mainTabController.indexIsChanging) {
+          setState(() {});
+        }
+      });
+  }
 
   @override
   void dispose() {
+    _mainTabController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _startScan(CleanerController controller) {
+    _mainTabController.animateTo(1);
+    controller.runScan();
   }
 
   @override
@@ -41,9 +60,30 @@ class _HomeScreenState extends State<HomeScreen> {
               searchController: _searchController,
               viewMode: _viewMode,
               onViewModeChanged: (m) => setState(() => _viewMode = m),
+              onScan: () => _startScan(controller),
+              showResultFilters: _mainTabController.index == 0,
+            ),
+            Material(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: TabBar(
+                controller: _mainTabController,
+                tabs: const [
+                  Tab(text: 'Results', icon: Icon(Icons.view_list, size: 18)),
+                  Tab(
+                    text: 'Details',
+                    icon: Icon(Icons.receipt_long, size: 18),
+                  ),
+                ],
+              ),
             ),
             Expanded(
-              child: _ScanBody(controller: controller, viewMode: _viewMode),
+              child: TabBarView(
+                controller: _mainTabController,
+                children: [
+                  _ResultsPane(controller: controller, viewMode: _viewMode),
+                  ScanDetailsPanel(controller: controller),
+                ],
+              ),
             ),
             _Footer(
               controller: controller,
@@ -96,8 +136,8 @@ class _DiskHeader extends StatelessWidget {
   }
 }
 
-class _ScanBody extends StatelessWidget {
-  const _ScanBody({required this.controller, required this.viewMode});
+class _ResultsPane extends StatelessWidget {
+  const _ResultsPane({required this.controller, required this.viewMode});
 
   final CleanerController controller;
   final _ScanViewMode viewMode;
@@ -109,50 +149,17 @@ class _ScanBody extends StatelessWidget {
         child: Text('Tap Scan to find reclaimable developer caches.'),
       );
     }
-    if (controller.scanPhase == ScanPhase.error) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Material(
-            color: Theme.of(context).colorScheme.errorContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(
-                'Scan failed: ${controller.scanError}',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onErrorContainer,
-                ),
-              ),
-            ),
-          ),
-          Expanded(child: ScanActivityLog(entries: controller.scanLogs)),
-        ],
+    if (controller.scanPhase == ScanPhase.scanning) {
+      return const Center(
+        child: Text('Scanning… open the Details tab for live activity.'),
       );
     }
-    if (controller.scanPhase == ScanPhase.scanning) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(12),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Scanning — large folders can take several minutes…',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(child: ScanActivityLog(entries: controller.scanLogs)),
-        ],
+    if (controller.scanPhase == ScanPhase.error) {
+      return Center(
+        child: Text(
+          'Scan failed. See the Details tab for the log.',
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
+        ),
       );
     }
     if (controller.visibleItems.isEmpty) {
@@ -160,30 +167,9 @@ class _ScanBody extends StatelessWidget {
     }
 
     if (viewMode == _ScanViewMode.treemap) {
-      return Column(
-        children: [
-          if (controller.scanLogs.isNotEmpty)
-            SizedBox(
-              height: 100,
-              child: ScanActivityLog(
-                entries: controller.scanLogs,
-                compact: true,
-              ),
-            ),
-          const Expanded(child: ScanTreemapView()),
-        ],
-      );
+      return const ScanTreemapView();
     }
-    return Column(
-      children: [
-        if (controller.scanLogs.isNotEmpty)
-          SizedBox(
-            height: 100,
-            child: ScanActivityLog(entries: controller.scanLogs, compact: true),
-          ),
-        Expanded(child: _ItemList(controller: controller)),
-      ],
-    );
+    return _ItemList(controller: controller);
   }
 }
 
@@ -193,12 +179,16 @@ class _Toolbar extends StatelessWidget {
     required this.searchController,
     required this.viewMode,
     required this.onViewModeChanged,
+    required this.onScan,
+    required this.showResultFilters,
   });
 
   final CleanerController controller;
   final TextEditingController searchController;
   final _ScanViewMode viewMode;
   final ValueChanged<_ScanViewMode> onViewModeChanged;
+  final VoidCallback onScan;
+  final bool showResultFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -212,51 +202,53 @@ class _Toolbar extends StatelessWidget {
           FilledButton.icon(
             onPressed: controller.scanPhase == ScanPhase.scanning
                 ? null
-                : () => controller.runScan(),
+                : onScan,
             icon: const Icon(Icons.search),
             label: const Text('Scan'),
           ),
-          SegmentedButton<_ScanViewMode>(
-            segments: const [
-              ButtonSegment(
-                value: _ScanViewMode.list,
-                label: Text('List'),
-                icon: Icon(Icons.list),
-              ),
-              ButtonSegment(
-                value: _ScanViewMode.treemap,
-                label: Text('Treemap'),
-                icon: Icon(Icons.grid_view),
-              ),
-            ],
-            selected: {viewMode},
-            onSelectionChanged: (s) => onViewModeChanged(s.first),
-          ),
-          FilterChip(
-            label: const Text('Safe only'),
-            selected: controller.safeOnlyFilter,
-            onSelected: controller.setSafeOnlyFilter,
-          ),
-          ...RuleGroup.values.map(
-            (g) => FilterChip(
-              label: Text(g.label),
-              selected: controller.groupFilter == g,
-              onSelected: (on) => controller.setGroupFilter(on ? g : null),
+          if (showResultFilters) ...[
+            SegmentedButton<_ScanViewMode>(
+              segments: const [
+                ButtonSegment(
+                  value: _ScanViewMode.list,
+                  label: Text('List'),
+                  icon: Icon(Icons.list),
+                ),
+                ButtonSegment(
+                  value: _ScanViewMode.treemap,
+                  label: Text('Treemap'),
+                  icon: Icon(Icons.grid_view),
+                ),
+              ],
+              selected: {viewMode},
+              onSelectionChanged: (s) => onViewModeChanged(s.first),
             ),
-          ),
-          SizedBox(
-            width: 220,
-            child: TextField(
-              controller: searchController,
-              decoration: const InputDecoration(
-                isDense: true,
-                prefixIcon: Icon(Icons.filter_list, size: 20),
-                hintText: 'Search…',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: controller.setSearchQuery,
+            FilterChip(
+              label: const Text('Safe only'),
+              selected: controller.safeOnlyFilter,
+              onSelected: controller.setSafeOnlyFilter,
             ),
-          ),
+            ...RuleGroup.values.map(
+              (g) => FilterChip(
+                label: Text(g.label),
+                selected: controller.groupFilter == g,
+                onSelected: (on) => controller.setGroupFilter(on ? g : null),
+              ),
+            ),
+            SizedBox(
+              width: 220,
+              child: TextField(
+                controller: searchController,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  prefixIcon: Icon(Icons.filter_list, size: 20),
+                  hintText: 'Search…',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: controller.setSearchQuery,
+              ),
+            ),
+          ],
         ],
       ),
     );
