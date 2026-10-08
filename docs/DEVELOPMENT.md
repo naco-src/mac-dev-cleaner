@@ -57,7 +57,7 @@ Both workflows are **`workflow_dispatch` only**.
 
 Release uses `MDC_FLUTTER=fvm flutter`, workspace cleanup actions under `.github/actions/`, and `tool/ci/gh-release-upload.sh`.
 
-In-app updates use [desktop_updater](https://pub.dev/packages/desktop_updater) with the feed at `https://github.com/naco-src/mac-dev-cleaner/releases/latest/download/app-archive.json`. Release CI runs `tool/macos/publish-desktop-updater.sh` (arm64) when these secrets exist:
+In-app updates use [desktop_updater](https://pub.dev/packages/desktop_updater) with the feed at `https://github.com/naco-src/mac-dev-cleaner/releases/latest/download/app-archive.json`. Updates are **optional** in the app (Check for updates in the toolbar; no check on launch). Release workflow: enable **Publish in-app update**; use **Mandatory update** only when you need a forced upgrade. Requires secrets:
 
 - `DESKTOP_UPDATER_KEY_BUNDLE_BASE64` — output of `dart run desktop_updater:release keys export --output release-key.dukey`
 - `DESKTOP_UPDATER_KEY_BUNDLE_PASSPHRASE`

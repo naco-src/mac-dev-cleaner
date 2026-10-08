@@ -22,6 +22,16 @@ on:
         required: false
         type: boolean
         default: false
+      publish_in_app_update:
+        description: "Publish desktop_updater feed (app-archive.json + signed zip) to this release."
+        required: false
+        type: boolean
+        default: false
+      mandatory_update:
+        description: "When publishing the in-app update, mark it mandatory (default is optional)."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -170,17 +180,19 @@ jobs:
           tool/macos/package-release-assets.sh
 
       - name: Publish desktop_updater feed (arm64, GitHub Release)
+        if: ${{ inputs.publish_in_app_update }}
         env:
           BUILD_NAME: ${{ needs.meta.outputs.version_name }}
           BUILD_NUMBER: ${{ needs.meta.outputs.build_number }}
           TAG: ${{ needs.meta.outputs.tag }}
           GH_TOKEN: ${{ github.token }}
           DESKTOP_UPDATER_KEY_BUNDLE_PASSPHRASE: ${{ secrets.DESKTOP_UPDATER_KEY_BUNDLE_PASSPHRASE }}
+          DESKTOP_UPDATER_MANDATORY: ${{ inputs.mandatory_update }}
         run: |
           set -euo pipefail
           if [ -z "${{ secrets.DESKTOP_UPDATER_KEY_BUNDLE_BASE64 }}" ]; then
-            echo "Skipping desktop_updater publish: set DESKTOP_UPDATER_KEY_BUNDLE_BASE64 and DESKTOP_UPDATER_KEY_BUNDLE_PASSPHRASE to enable in-app updates."
-            exit 0
+            echo "Skipping desktop_updater publish: set DESKTOP_UPDATER_KEY_BUNDLE_BASE64 and DESKTOP_UPDATER_KEY_BUNDLE_PASSPHRASE."
+            exit 1
           fi
           bundle="${RUNNER_TEMP}/desktop-updater-release-key.dukey"
           echo "${{ secrets.DESKTOP_UPDATER_KEY_BUNDLE_BASE64 }}" | base64 --decode > "${bundle}"

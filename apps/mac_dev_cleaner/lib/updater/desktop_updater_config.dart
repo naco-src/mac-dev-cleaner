@@ -43,5 +43,7 @@ Future<DesktopUpdaterController> createDesktopUpdaterController() async {
     expectedPackageId: kMacOsPackageId,
     trustedReleasePublicKeys: trustedReleasePublicKeys,
     recoveryStore: recoveryStore,
+    // Optional updates: user checks from the app bar; feed defaults to non-mandatory.
+    skipInitialVersionCheck: true,
   );
 }

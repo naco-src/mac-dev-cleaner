@@ -16,8 +16,8 @@ class MacDevCleanerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget home = const _AppShell();
     final updater = updaterController;
+    Widget home = _AppShell(updaterController: updater);
     if (updater != null) {
       home = DesktopUpdateWidget(controller: updater, child: home);
     }
@@ -37,7 +37,9 @@ class MacDevCleanerApp extends StatelessWidget {
 }
 
 class _AppShell extends StatefulWidget {
-  const _AppShell();
+  const _AppShell({this.updaterController});
+
+  final DesktopUpdaterController? updaterController;
 
   @override
   State<_AppShell> createState() => _AppShellState();
@@ -68,6 +70,22 @@ class _AppShellState extends State<_AppShell> {
     await showFdaOnboardingSheet(context, onDismiss: () {});
   }
 
+  Future<void> _checkForUpdates() async {
+    final controller = widget.updaterController;
+    if (controller == null) {
+      return;
+    }
+    try {
+      await controller.checkForUpdates();
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Update check failed: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const destinations = [
@@ -92,6 +110,12 @@ class _AppShellState extends State<_AppShell> {
       appBar: AppBar(
         title: const Text('Mac Dev Cleaner'),
         actions: [
+          if (widget.updaterController != null)
+            IconButton(
+              icon: const Icon(Icons.system_update_alt_outlined),
+              tooltip: 'Check for updates',
+              onPressed: _checkForUpdates,
+            ),
           IconButton(
             icon: const Icon(Icons.info_outline),
             tooltip: 'Full Disk Access guide',

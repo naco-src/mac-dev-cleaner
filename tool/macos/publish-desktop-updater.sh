@@ -58,4 +58,8 @@ else
   publish_args+=(--initialize-feed)
 fi
 
+case "${DESKTOP_UPDATER_MANDATORY:-false}" in
+  true | True | 1 | yes | YES) publish_args+=(--mandatory) ;;
+esac
+
 fvm dart "${publish_args[@]}"
