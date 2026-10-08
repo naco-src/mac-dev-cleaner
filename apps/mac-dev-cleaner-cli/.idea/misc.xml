@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="MarkdownSettings">
+    <option name="previewPanelProviderInfo">
+      <ProviderInfo name="Compose (experimental)" className="com.intellij.markdown.compose.preview.ComposePanelProvider" />
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2">
+    <output url="file://$PROJECT_DIR$/out" />
+  </component>
+  <component name="StoredSessionsInfoStore">
+    <option name="sessions">
+      <list>
+        <SessionInfoState>
+          <option name="id" value="20260424-195800-e7e2c844-828a-4838-a8e4-fccbb2a28ed3" />
+          <option name="lastUpdateTimestamp" value="1777035480450" />
+          <option name="responseMode" value="Agent" />
+          <option name="title" value="New Agent Session" />
+          <option name="user" value="nha.nhv@picontechnology.com" />
+        </SessionInfoState>
+      </list>
+    </option>
+  </component>
+</project>
