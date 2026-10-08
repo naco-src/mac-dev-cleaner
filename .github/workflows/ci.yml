@@ -5,14 +5,14 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, MYRUNNER]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
+      - uses: actions/checkout@v5
         with:
-          sdk: stable
-      - run: dart pub get
-        working-directory: .
-      - run: dart analyze packages/mac_dev_cleaner_core apps/mac-dev-cleaner-cli
-      - run: dart test
-        working-directory: packages/mac_dev_cleaner_core
+          clean: true
+
+      - name: Install FVM Flutter SDK (.fvmrc)
+        run: fvm install
+
+      - name: Bootstrap, analyze, test
+        run: make check

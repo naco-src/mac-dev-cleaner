@@ -3,18 +3,15 @@ set -euo pipefail
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 
-require_cmd dart
+require_fvm
 ROOT="$(root_dir)"
+fvm_install_if_needed "${ROOT}"
 cd "${ROOT}"
 
-echo "==> dart pub get (workspace)"
-dart pub get
+echo "==> fvm dart pub get (workspace)"
+mdc_dart pub get
 
-if command -v flutter >/dev/null 2>&1; then
-  echo "==> flutter pub get (${ROOT}/apps/mac_dev_cleaner)"
-  (cd "${ROOT}/apps/mac_dev_cleaner" && flutter pub get)
-else
-  echo "==> skip flutter pub get (flutter not on PATH)"
-fi
+echo "==> fvm flutter pub get (${ROOT}/apps/mac_dev_cleaner)"
+(cd "${ROOT}/apps/mac_dev_cleaner" && mdc_flutter pub get)
 
 echo "==> done"

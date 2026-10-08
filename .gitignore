@@ -3,6 +3,8 @@
 mac-dev-cleaner-*-macos-*.zip
 mac-dev-cleaner-*-macos-*.dmg
 
+# FVM (keep .fvmrc committed)
+
 # Miscellaneous
 *.class
 *.lock
@@ -11,8 +13,6 @@ mac-dev-cleaner-*-macos-*.dmg
 *.swp
 .buildlog/
 .history
-
-
 
 # Flutter repo-specific
 /bin/cache/
@@ -122,3 +122,6 @@ app.*.symbols
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
+
+# FVM Version Cache
+.fvm/

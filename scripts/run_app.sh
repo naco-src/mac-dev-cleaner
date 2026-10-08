@@ -3,7 +3,9 @@ set -euo pipefail
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 
-require_cmd flutter
+require_fvm
 ROOT="$(root_dir)"
+fvm_install_if_needed "${ROOT}"
 cd "${ROOT}/apps/mac_dev_cleaner"
-exec flutter run -d macos "$@"
+
+exec mdc_flutter run -d macos "$@"

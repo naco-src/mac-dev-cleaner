@@ -14,3 +14,23 @@ require_cmd() {
     exit 1
   fi
 }
+
+require_fvm() {
+  require_cmd fvm
+}
+
+# Pin Flutter SDK from .fvmrc when present (no-op if already installed).
+fvm_install_if_needed() {
+  local root="${1:?}"
+  if [[ -f "${root}/.fvmrc" ]]; then
+    (cd "${root}" && fvm install)
+  fi
+}
+
+mdc_dart() {
+  fvm dart "$@"
+}
+
+mdc_flutter() {
+  fvm flutter "$@"
+}

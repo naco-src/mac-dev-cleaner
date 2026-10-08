@@ -12,20 +12,22 @@ make cli-scan
 make cli-plan-safe
 ```
 
+Requires [FVM](https://fvm.app) (`fvm install` reads `.fvmrc`). All Dart/Flutter CLI use **`fvm dart`** / **`fvm flutter`** (via `make` and `scripts/`).
+
 Or directly:
 
 ```bash
-cd apps/mac-dev-cleaner-cli
-dart pub get
-dart run bin/mdc.dart scan
-dart run bin/mdc.dart plan --safe
-dart run bin/mdc.dart clean --safe --yes
+fvm install
+make bootstrap
+make cli-scan
+make cli-plan-safe
+make cli-clean-safe   # destructive
 ```
 
 Activate globally (optional):
 
 ```bash
-dart pub global activate --source path apps/mac-dev-cleaner-cli
+fvm dart pub global activate --source path apps/mac-dev-cleaner-cli
 mdc scan
 ```
 
@@ -79,4 +81,4 @@ make macos-release      # signed/unsigned Release .app locally
 make macos-packaging    # arm64 + x64 .zip and .dmg at repo root
 ```
 
-GitHub: **Actions → Release** (workflow_dispatch) builds on `macos-latest`, uploads assets, and publishes the release. Requires `gh` on runners (preinstalled on GitHub-hosted).
+GitHub: **Actions → Release** and **CI** (workflow_dispatch) run on self-hosted **MYRUNNER** with FVM (no Flutter/Dart setup in the workflow). Requires `fvm`, `gh`, and Xcode on the runner.

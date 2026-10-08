@@ -8,7 +8,8 @@ RELEASE_VERSION_SH := $(CURDIR)/tool/release-version.sh
 BUILD_NAME := $(shell $(RELEASE_VERSION_SH) BUILD_NAME)
 BUILD_NUMBER := $(shell $(RELEASE_VERSION_SH) BUILD_NUMBER)
 RELEASE_TAG ?= $(shell $(RELEASE_VERSION_SH) TAG)
-FLUTTER ?= flutter
+FLUTTER ?= fvm flutter
+DART ?= fvm dart
 FLUTTER_RELEASE_FLAGS := --build-name=$(BUILD_NAME) --build-number=$(BUILD_NUMBER)
 
 .DEFAULT_GOAL := help
@@ -30,8 +31,8 @@ help:
 	@echo "  make get          alias for bootstrap"
 	@echo ""
 	@echo "Quality:"
-	@echo "  make analyze      dart + flutter analyze"
-	@echo "  make test         dart + flutter test"
+	@echo "  make analyze      fvm dart + fvm flutter analyze"
+	@echo "  make test         fvm dart + fvm flutter test"
 	@echo "  make check        bootstrap, analyze, test"
 	@echo "  make clean        remove build artifacts"
 	@echo ""
@@ -50,7 +51,7 @@ help:
 	@echo "  make build-macos       alias for macos-release"
 	@echo "  make build-macos-debug"
 	@echo ""
-	@echo "  make install-cli  dart pub global activate (path)"
+	@echo "  make install-cli  fvm dart pub global activate (path)"
 	@echo "  make release-version  print eval-able version exports"
 
 release-version:
@@ -114,4 +115,4 @@ build-macos-debug:
 	@$(SCRIPTS)/build_macos.sh debug
 
 install-cli:
-	cd "$(ROOT)/apps/mac-dev-cleaner-cli" && dart pub global activate --source path .
+	cd "$(ROOT)/apps/mac-dev-cleaner-cli" && $(DART) pub global activate --source path .

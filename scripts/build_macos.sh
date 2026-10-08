@@ -3,10 +3,12 @@ set -euo pipefail
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 
-require_cmd flutter
+require_fvm
 ROOT="$(root_dir)"
 APP="${ROOT}/apps/mac_dev_cleaner"
 RELEASE_VERSION_SH="${ROOT}/tool/release-version.sh"
+
+fvm_install_if_needed "${ROOT}"
 
 MODE="${1:-release}"
 shift || true
@@ -24,17 +26,17 @@ if [[ -n "${BUILD_NAME}" && -n "${BUILD_NUMBER}" ]]; then
 fi
 
 cd "${APP}"
-flutter pub get
+mdc_flutter pub get
 
 case "${MODE}" in
   debug)
-    exec flutter build macos --debug "${FLAGS[@]}" "$@"
+    exec mdc_flutter build macos --debug "${FLAGS[@]}" "$@"
     ;;
   release)
-    exec flutter build macos --release "${FLAGS[@]}" "$@"
+    exec mdc_flutter build macos --release "${FLAGS[@]}" "$@"
     ;;
   *)
-    echo "usage: $0 [debug|release] [extra flutter build args...]" >&2
+    echo "usage: $0 [debug|release] [extra fvm flutter build args...]" >&2
     exit 2
     ;;
 esac

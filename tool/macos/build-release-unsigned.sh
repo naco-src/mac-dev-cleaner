@@ -10,7 +10,7 @@ BUILD_NUMBER="${BUILD_NUMBER:?Set BUILD_NUMBER}"
 MACOS_ARCH="${MACOS_ARCH:-arm64}"
 export STAGE_DIR="${STAGE_DIR:-${ROOT}/.macos-staging/${MACOS_ARCH}}"
 
-MDC_FLUTTER="${MDC_FLUTTER:-flutter}"
+MDC_FLUTTER="${MDC_FLUTTER:-fvm flutter}"
 read -ra FLUTTER <<< "${MDC_FLUTTER}"
 
 run_flutter_build() {
