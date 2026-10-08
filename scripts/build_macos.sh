@@ -30,10 +30,10 @@ mdc_flutter pub get
 
 case "${MODE}" in
   debug)
-    exec mdc_flutter build macos --debug "${FLAGS[@]}" "$@"
+    exec fvm flutter build macos --debug "${FLAGS[@]}" "$@"
     ;;
   release)
-    exec mdc_flutter build macos --release "${FLAGS[@]}" "$@"
+    exec fvm flutter build macos --release "${FLAGS[@]}" "$@"
     ;;
   *)
     echo "usage: $0 [debug|release] [extra fvm flutter build args...]" >&2

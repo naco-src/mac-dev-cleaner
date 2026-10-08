@@ -8,4 +8,4 @@ ROOT="$(root_dir)"
 fvm_install_if_needed "${ROOT}"
 cd "${ROOT}/apps/mac_dev_cleaner"
 
-exec mdc_flutter run -d macos "$@"
+exec fvm flutter run -d macos "$@"

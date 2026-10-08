@@ -8,4 +8,4 @@ ROOT="$(root_dir)"
 fvm_install_if_needed "${ROOT}"
 cd "${ROOT}/apps/mac-dev-cleaner-cli"
 
-exec mdc_dart run bin/mdc.dart "$@"
+exec fvm dart run bin/mdc.dart "$@"
