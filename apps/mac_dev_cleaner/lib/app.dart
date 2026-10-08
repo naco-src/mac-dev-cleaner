@@ -16,7 +16,12 @@ class MacDevCleanerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shell = ChangeNotifierProvider(
+    Widget home = const _AppShell();
+    final updater = updaterController;
+    if (updater != null) {
+      home = DesktopUpdateWidget(controller: updater, child: home);
+    }
+    return ChangeNotifierProvider(
       create: (_) => controller ?? CleanerController()
         ..refreshDiskSpace(),
       child: MaterialApp(
@@ -25,14 +30,9 @@ class MacDevCleanerApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2D6A4F)),
           useMaterial3: true,
         ),
-        home: const _AppShell(),
+        home: home,
       ),
     );
-    final updater = updaterController;
-    if (updater == null) {
-      return shell;
-    }
-    return DesktopUpdateWidget(controller: updater, child: shell);
   }
 }
 
