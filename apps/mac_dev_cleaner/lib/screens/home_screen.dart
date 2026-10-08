@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../controller/cleaner_controller.dart';
 import '../widgets/plan_summary_dialog.dart';
 import '../widgets/scan_item_tile.dart';
+import '../widgets/scan_activity_log.dart';
 import '../widgets/scan_treemap_view.dart';
 
 enum _ScanViewMode { list, treemap }
@@ -109,19 +110,49 @@ class _ScanBody extends StatelessWidget {
       );
     }
     if (controller.scanPhase == ScanPhase.error) {
-      return Center(child: Text('Scan failed: ${controller.scanError}'));
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Material(
+            color: Theme.of(context).colorScheme.errorContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(
+                'Scan failed: ${controller.scanError}',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onErrorContainer,
+                ),
+              ),
+            ),
+          ),
+          Expanded(child: ScanActivityLog(entries: controller.scanLogs)),
+        ],
+      );
     }
-    if (controller.scanPhase == ScanPhase.scanning &&
-        controller.items.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Scanning — this can take several minutes…'),
-          ],
-        ),
+    if (controller.scanPhase == ScanPhase.scanning) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(12),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Scanning — large folders can take several minutes…',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: ScanActivityLog(entries: controller.scanLogs)),
+        ],
       );
     }
     if (controller.visibleItems.isEmpty) {
@@ -129,9 +160,30 @@ class _ScanBody extends StatelessWidget {
     }
 
     if (viewMode == _ScanViewMode.treemap) {
-      return const ScanTreemapView();
+      return Column(
+        children: [
+          if (controller.scanLogs.isNotEmpty)
+            SizedBox(
+              height: 100,
+              child: ScanActivityLog(
+                entries: controller.scanLogs,
+                compact: true,
+              ),
+            ),
+          const Expanded(child: ScanTreemapView()),
+        ],
+      );
     }
-    return _ItemList(controller: controller);
+    return Column(
+      children: [
+        if (controller.scanLogs.isNotEmpty)
+          SizedBox(
+            height: 100,
+            child: ScanActivityLog(entries: controller.scanLogs, compact: true),
+          ),
+        Expanded(child: _ItemList(controller: controller)),
+      ],
+    );
   }
 }
 

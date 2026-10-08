@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
-import '../isolate/scan_isolate.dart';
-
 enum ScanPhase { idle, scanning, done, error }
 
 class CleanerController extends ChangeNotifier {
@@ -36,6 +34,8 @@ class CleanerController extends ChangeNotifier {
   CleanResult? lastCleanResult;
 
   RuleGroup? treemapDrillGroup;
+
+  final List<ScanLogEntry> scanLogs = [];
 
   List<ScanItem> get visibleItems {
     var list = items;
@@ -91,27 +91,41 @@ class CleanerController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _appendScanLog(ScanLogEntry entry) {
+    scanLogs.add(entry);
+    notifyListeners();
+  }
+
   Future<void> runScan() async {
     scanPhase = ScanPhase.scanning;
     scanError = null;
     treemapDrillGroup = null;
+    scanLogs.clear();
     notifyListeners();
     try {
-      items = await runScanOffMainThread();
+      _appendScanLog(ScanLogEntry.info('Refreshing disk space…'));
+      await refreshDiskSpace();
+      items = await _cleaner.scan(
+        onProgress: (entry) {
+          scanLogs.add(entry);
+          notifyListeners();
+        },
+      );
       selectedIds.clear();
       for (final item in items) {
         if (item.cleanable && item.selectedByDefault && item.preconditionMet) {
           selectedIds.add(item.id);
         }
       }
-      await refreshDiskSpace();
       scanPhase = ScanPhase.done;
     } catch (e, st) {
       scanError = e.toString();
       scanPhase = ScanPhase.error;
+      _appendScanLog(ScanLogEntry.error('Scan failed: $e'));
       if (kDebugMode) {
-        // ignore: avoid_print
-        print(st);
+        for (final line in st.toString().split('\n').take(5)) {
+          _appendScanLog(ScanLogEntry.error(line));
+        }
       }
     }
     notifyListeners();

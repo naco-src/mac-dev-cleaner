@@ -13,6 +13,7 @@ import '../models/clean_action.dart';
 import '../models/enums.dart';
 import '../models/scan_item.dart';
 import '../util/paths.dart';
+import 'scan_log.dart';
 import 'size_scanner.dart';
 
 class ScanService {
@@ -28,21 +29,76 @@ class ScanService {
   final MdcPaths paths;
   final SizeScanner _sizes;
 
-  Future<List<ScanItem>> scanAll() async {
-    final items = <ScanItem>[];
-    final projectRefs = await ProjectRefs(
-      fileSystem,
-      roots: paths.projectRoots(),
-    ).collect();
+  Future<List<ScanItem>> scanAll({ScanProgressCallback? onProgress}) async {
+    void log(ScanLogLevel level, String message) {
+      onProgress?.call(ScanLogEntry(level: level, message: message));
+    }
 
-    items.addAll(await _safeRules());
-    items.addAll(await _conditionalAndroid(projectRefs));
-    items.addAll(await _conditionalXcode());
-    items.addAll(await _ideAndBrowser());
-    items.addAll(await _projectSweeper(projectRefs));
-    items.addAll(await _protectedReports());
+    Future<List<ScanItem>> phase(
+      String name,
+      Future<List<ScanItem>> Function() run,
+    ) async {
+      log(ScanLogLevel.info, '→ $name');
+      try {
+        final result = await run();
+        log(ScanLogLevel.info, '✓ $name (${result.length} items)');
+        return result;
+      } catch (e, st) {
+        log(ScanLogLevel.error, '✗ $name: $e');
+        if (e is! Exception) {
+          log(ScanLogLevel.error, st.toString().split('\n').first);
+        }
+        return [];
+      }
+    }
+
+    log(ScanLogLevel.info, 'Scan started');
+    log(ScanLogLevel.info, 'Project roots: ${paths.projectRoots().join(', ')}');
+
+    final items = <ScanItem>[];
+    ProjectRefSnapshot projectRefs;
+    log(ScanLogLevel.info, '→ Index projects (NDK, Gradle refs)');
+    try {
+      projectRefs = await ProjectRefs(
+        fileSystem,
+        roots: paths.projectRoots(),
+      ).collect();
+      log(
+        ScanLogLevel.info,
+        '✓ Index projects — ${projectRefs.projectPaths.length} project(s), '
+        '${projectRefs.ndkVersions.length} NDK version(s)',
+      );
+    } catch (e) {
+      log(ScanLogLevel.error, '✗ Index projects: $e');
+      projectRefs = ProjectRefSnapshot(
+        ndkVersions: {},
+        compileSdks: {},
+        gradleWrapperVersions: {},
+        projectPaths: [],
+      );
+    }
+
+    final refs = projectRefs;
+    items.addAll(await phase('Safe cleanup targets', _safeRules));
+    items.addAll(
+      await phase(
+        'Android (NDK, images, pub)',
+        () => _conditionalAndroid(refs),
+      ),
+    );
+    items.addAll(
+      await phase('Xcode (simulators, archives)', _conditionalXcode),
+    );
+    items.addAll(await phase('IDE & browser caches', _ideAndBrowser));
+    items.addAll(
+      await phase('Stale project artifacts', () => _projectSweeper(refs)),
+    );
+    items.addAll(
+      await phase('Protected totals (report only)', _protectedReports),
+    );
 
     items.sort((a, b) => b.sizeBytes.compareTo(a.sizeBytes));
+    log(ScanLogLevel.info, 'Scan finished — ${items.length} entries');
     return items;
   }
 

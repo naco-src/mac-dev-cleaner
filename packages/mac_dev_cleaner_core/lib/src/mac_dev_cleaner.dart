@@ -9,6 +9,7 @@ import 'models/plan.dart';
 import 'models/scan_item.dart';
 import 'planner/planner.dart';
 import 'report/disk_space.dart';
+import 'scanner/scan_log.dart';
 import 'scanner/scan_service.dart';
 import 'util/paths.dart';
 
@@ -41,7 +42,8 @@ class MacDevCleaner {
   late final Planner planner;
   late final DoctorService doctor;
 
-  Future<List<ScanItem>> scan() => scanService.scanAll();
+  Future<List<ScanItem>> scan({ScanProgressCallback? onProgress}) =>
+      scanService.scanAll(onProgress: onProgress);
 
   CleanPlan plan(
     List<ScanItem> items, {
