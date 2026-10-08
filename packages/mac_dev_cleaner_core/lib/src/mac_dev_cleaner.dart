@@ -76,7 +76,8 @@ class MacDevCleaner {
   Future<DataVolumeSpace?> dataVolumeSpace() =>
       readDataVolumeSpace(commandRunner);
 
-  Future<List<DoctorIssue>> doctorCheck() => doctor.runAll();
+  Future<List<DoctorIssue>> doctorCheck({ScanProgressCallback? onProgress}) =>
+      doctor.runAll(onProgress: onProgress);
 
   Future<List<Map<String, dynamic>>> history({int limit = 50}) =>
       historyLog.readAll(limit: limit);

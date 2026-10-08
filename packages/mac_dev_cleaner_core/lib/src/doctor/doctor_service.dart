@@ -1,6 +1,7 @@
 import 'dart:io' as io;
 
 import '../io/process_runner.dart';
+import '../scanner/scan_log.dart';
 import '../util/paths.dart';
 
 class DoctorIssue {
@@ -18,12 +19,50 @@ class DoctorService {
   final ProcessRunner commandRunner;
   final MdcPaths paths;
 
-  Future<List<DoctorIssue>> runAll() async {
-    final issues = <DoctorIssue>[];
-    issues.addAll(await checkNpmOwnership());
-    issues.addAll(await checkSudoNpm());
-    issues.addAll(await checkHomebrew());
-    issues.addAll(checkFullDiskAccessHint());
+  Future<List<DoctorIssue>> runAll({ScanProgressCallback? onProgress}) async {
+    void log(ScanLogLevel level, String message) {
+      onProgress?.call(ScanLogEntry(level: level, message: message));
+    }
+
+    Future<List<DoctorIssue>> phase(
+      String name,
+      Future<List<DoctorIssue>> Function() run,
+    ) async {
+      log(ScanLogLevel.info, '→ $name');
+      try {
+        final result = await run();
+        log(
+          ScanLogLevel.info,
+          '✓ $name (${result.length} issue${result.length == 1 ? '' : 's'})',
+        );
+        return result;
+      } catch (e, st) {
+        log(ScanLogLevel.error, '✗ $name: $e');
+        if (e is! Exception) {
+          log(ScanLogLevel.error, st.toString().split('\n').first);
+        }
+        return [];
+      }
+    }
+
+    log(ScanLogLevel.info, 'Doctor started');
+    final results = await Future.wait<List<DoctorIssue>>([
+      phase('npm cache ownership', checkNpmOwnership),
+      phase('npm install path', checkSudoNpm),
+      phase('Homebrew', checkHomebrew),
+    ]);
+    log(ScanLogLevel.info, '→ Full Disk Access hint');
+    final fda = checkFullDiskAccessHint();
+    log(
+      ScanLogLevel.info,
+      '✓ Full Disk Access hint (${fda.length} note${fda.length == 1 ? '' : 's'})',
+    );
+
+    final issues = [...results[0], ...results[1], ...results[2], ...fda];
+    log(
+      ScanLogLevel.info,
+      'Doctor finished — ${issues.length} item${issues.length == 1 ? '' : 's'} listed',
+    );
     return issues;
   }
 

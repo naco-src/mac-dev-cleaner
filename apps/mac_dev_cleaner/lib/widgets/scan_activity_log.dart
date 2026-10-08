@@ -6,10 +6,12 @@ class ScanActivityLog extends StatefulWidget {
     super.key,
     required this.entries,
     this.compact = false,
+    this.title = 'Scan activity',
   });
 
   final List<ScanLogEntry> entries;
   final bool compact;
+  final String title;
 
   @override
   State<ScanActivityLog> createState() => _ScanActivityLogState();
@@ -80,7 +82,7 @@ class _ScanActivityLogState extends State<ScanActivityLog> {
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(12, widget.compact ? 4 : 8, 12, 4),
-            child: Text('Scan activity', style: theme.textTheme.titleSmall),
+            child: Text(widget.title, style: theme.textTheme.titleSmall),
           ),
           Expanded(child: list),
         ],

@@ -26,6 +26,7 @@ class CleanerController extends ChangeNotifier {
 
   List<DoctorIssue> doctorIssues = [];
   bool doctorLoading = false;
+  final List<ScanLogEntry> doctorLogs = [];
 
   List<Map<String, dynamic>> historyEntries = [];
   bool historyLoading = false;
@@ -192,9 +193,15 @@ class CleanerController extends ChangeNotifier {
 
   Future<void> loadDoctor() async {
     doctorLoading = true;
+    doctorLogs.clear();
     notifyListeners();
     try {
-      doctorIssues = await _cleaner.doctorCheck();
+      doctorIssues = await _cleaner.doctorCheck(
+        onProgress: (entry) {
+          doctorLogs.add(entry);
+          notifyListeners();
+        },
+      );
     } finally {
       doctorLoading = false;
       notifyListeners();
