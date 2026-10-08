@@ -1,0 +1,12 @@
+name: mac_dev_cleaner_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+workspace:
+  - packages/mac_dev_cleaner_core
+  - apps/mac-dev-cleaner-cli
+
+dev_dependencies:
+  lints: ^6.0.0
