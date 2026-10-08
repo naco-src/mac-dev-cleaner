@@ -1,8 +1,8 @@
 # desktop_updater publish config (see https://pub.dev/packages/desktop_updater).
 # Runtime app-archive URL uses GitHub “latest” so clients need no rebuild per tag.
 updates:
-  # Overridden in CI via --base-url …/releases/download/${TAG}
-  baseUrl: https://github.com/naco-src/mac-dev-cleaner/releases/download/v0.0.0
+  # Stable client feed (…/latest/download/app-archive.json). Publish uses the same baseUrl.
+  baseUrl: https://github.com/naco-src/mac-dev-cleaner/releases/latest/download
   channel: stable
   output: dist/desktop_updater
 

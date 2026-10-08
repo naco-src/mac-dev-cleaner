@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "profileId": "9ab6cdc6f087cdd938278773707c381c",
-  "feedUrl": "https://github.com/naco-src/mac-dev-cleaner/releases/download/v0.0.0/app-archive.json",
+  "feedUrl": "https://github.com/naco-src/mac-dev-cleaner/releases/latest/download/app-archive.json",
   "activeKeyId": "release-09d9f482daf8fe781a793efc",
   "publicKeys": {
     "release-09d9f482daf8fe781a793efc": "8FnYXiG2KS2sWe0ktzAgvi4XpRpI/tknsZuPZYxVkmQ="
