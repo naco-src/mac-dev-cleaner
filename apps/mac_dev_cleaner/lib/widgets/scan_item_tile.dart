@@ -34,7 +34,7 @@ class _ScanItemTileState extends State<ScanItemTile> {
         children: [
           ListTile(
             leading: Checkbox(
-              value: canSelect ? widget.selected : null,
+              value: canSelect && widget.selected,
               onChanged: canSelect ? widget.onSelected : null,
             ),
             title: Row(
