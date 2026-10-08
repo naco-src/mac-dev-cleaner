@@ -4,11 +4,11 @@ import 'dart:io';
 import 'package:file/file.dart';
 
 import '../models/plan.dart';
-import '../util/paths.dart';
+import '../platform/host_paths.dart';
 
 class HistoryLog {
-  HistoryLog(this.fileSystem, MdcPaths paths)
-      : _historyFile = paths.historyFile;
+  HistoryLog(this.fileSystem, HostPaths paths)
+    : _historyFile = paths.historyFile;
 
   final FileSystem fileSystem;
   final String _historyFile;
@@ -37,8 +37,13 @@ class HistoryLog {
     if (!file.existsSync()) {
       return [];
     }
-    final lines = file.readAsLinesSync().where((l) => l.trim().isNotEmpty).toList();
-    final slice = lines.length > limit ? lines.sublist(lines.length - limit) : lines;
+    final lines = file
+        .readAsLinesSync()
+        .where((l) => l.trim().isNotEmpty)
+        .toList();
+    final slice = lines.length > limit
+        ? lines.sublist(lines.length - limit)
+        : lines;
     return slice.map((l) => jsonDecode(l) as Map<String, dynamic>).toList();
   }
 }

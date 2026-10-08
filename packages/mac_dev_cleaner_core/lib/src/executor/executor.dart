@@ -9,7 +9,7 @@ import '../models/clean_action.dart';
 import '../models/enums.dart';
 import '../models/plan.dart';
 import '../models/scan_item.dart';
-import '../util/paths.dart';
+import '../platform/host_paths.dart';
 
 typedef ConfirmCallback = Future<bool> Function(ScanItem item);
 
@@ -25,7 +25,7 @@ class Executor {
 
   final FileSystem fileSystem;
   final ProcessRunner commandRunner;
-  final MdcPaths paths;
+  final HostPaths paths;
   final HistoryLog historyLog;
   final bool useTrash;
   final bool permanentDelete;

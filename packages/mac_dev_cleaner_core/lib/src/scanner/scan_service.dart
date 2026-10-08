@@ -13,17 +13,19 @@ import '../models/clean_action.dart';
 import '../models/enums.dart';
 import '../models/scan_item.dart';
 import '../util/parallel.dart';
-import '../util/paths.dart';
+import '../platform/macos/macos_paths.dart';
+import '../platform/scan_engine.dart';
 import 'scan_log.dart';
 import 'size_scanner.dart';
 
-class ScanService {
+/// macOS scan rules; other platforms should provide their own [ScanEngine].
+class ScanService implements ScanEngine {
   ScanService({
     required this.fileSystem,
     required this.commandRunner,
-    MdcPaths? paths,
+    MacOSPaths? paths,
     int? scanConcurrency,
-  }) : paths = paths ?? MdcPaths(),
+  }) : paths = paths ?? MacOSHostPaths(),
        scanConcurrency = scanConcurrency ?? defaultScanConcurrency(),
        _sizes = SizeScanner(
          fileSystem,
@@ -32,10 +34,11 @@ class ScanService {
 
   final FileSystem fileSystem;
   final ProcessRunner commandRunner;
-  final MdcPaths paths;
+  final MacOSPaths paths;
   final int scanConcurrency;
   final SizeScanner _sizes;
 
+  @override
   Future<List<ScanItem>> scanAll({ScanProgressCallback? onProgress}) async {
     void log(ScanLogLevel level, String message) {
       onProgress?.call(ScanLogEntry(level: level, message: message));

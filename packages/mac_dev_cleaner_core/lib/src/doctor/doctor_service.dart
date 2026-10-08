@@ -1,8 +1,10 @@
 import 'dart:io' as io;
 
 import '../io/process_runner.dart';
+import '../platform/doctor_engine.dart';
+import '../platform/host_paths.dart';
+import '../platform/macos/macos_paths.dart';
 import '../scanner/scan_log.dart';
-import '../util/paths.dart';
 
 class DoctorIssue {
   DoctorIssue({required this.title, required this.detail, this.fixCommand});
@@ -12,13 +14,15 @@ class DoctorIssue {
   final String? fixCommand;
 }
 
-class DoctorService {
-  DoctorService({required this.commandRunner, MdcPaths? paths})
-    : paths = paths ?? MdcPaths();
+/// macOS doctor checks; other platforms should provide their own [DoctorEngine].
+class DoctorService implements DoctorEngine {
+  DoctorService({required this.commandRunner, HostPaths? paths})
+    : paths = paths ?? MacOSHostPaths();
 
   final ProcessRunner commandRunner;
-  final MdcPaths paths;
+  final HostPaths paths;
 
+  @override
   Future<List<DoctorIssue>> runAll({ScanProgressCallback? onProgress}) async {
     void log(ScanLogLevel level, String message) {
       onProgress?.call(ScanLogEntry(level: level, message: message));
