@@ -4,6 +4,16 @@ CLI tool to **scan**, **plan**, and **clean** macOS developer caches (Xcode, And
 
 ## Quick start
 
+From the repo root (recommended):
+
+```bash
+make bootstrap
+make cli-scan
+make cli-plan-safe
+```
+
+Or directly:
+
 ```bash
 cd apps/mac-dev-cleaner-cli
 dart pub get
@@ -45,9 +55,12 @@ See [product/plan/PLAN.md](product/plan/PLAN.md) for the full rule catalog.
 ## Flutter macOS app
 
 ```bash
-cd apps/mac_dev_cleaner
-flutter pub get
-flutter run -d macos
+make run-app
+# or: make build-macos
 ```
+
+## Makefile
+
+Run `make help` for targets (`test`, `analyze`, `check`, `mdc ARGS='…'`, etc.). Scripts live in [`scripts/`](scripts/).
 
 Grant **Full Disk Access** to “Mac Dev Cleaner” when prompted (toolbar info icon to reopen the guide).
