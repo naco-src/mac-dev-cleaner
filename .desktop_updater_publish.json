@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "baseUrl": "https://raw.githubusercontent.com/naco-src/mac-dev-cleaner/updates/",
-  "localRoot": "/var/folders/4x/crqsshl51b9b6gy00g92hwpw0000gn/T/desktop_updater_upload_iUrihK/versioned-root",
+  "localRoot": "/var/folders/4x/crqsshl51b9b6gy00g92hwpw0000gn/T/desktop_updater_upload_HdP8Uj/index-root",
   "appArchive": {
     "path": "app-archive.json",
     "url": "https://raw.githubusercontent.com/naco-src/mac-dev-cleaner/updates/app-archive.json"
@@ -21,10 +21,8 @@
     "sha256": "b704a4d657dee4cdb0486b80707a0abf0693894e0c6bc30b3c210961c79b11ac",
     "length": 19608505
   },
-  "uploadPhase": "versioned",
+  "uploadPhase": "index",
   "allowedFiles": [
-    ".desktop_updater_publish.json",
-    "releases/stable/2026.10.08/build-40377716/macos/release.json",
-    "releases/stable/2026.10.08/build-40377716/macos/Mac Dev Cleaner-2026.10.08-macos.zip"
+    "app-archive.json"
   ]
 }
