@@ -4,6 +4,7 @@ import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 import '../theme/mdc_theme.dart';
 import 'copy_command_button.dart';
 import 'risk_badge.dart';
+import 'scan_item_subdetail_list.dart';
 
 class ScanItemTile extends StatefulWidget {
   const ScanItemTile({
@@ -29,6 +30,8 @@ class _ScanItemTileState extends State<ScanItemTile> {
     final item = widget.item;
     final canSelect = item.cleanable && item.preconditionMet;
     final copyParts = item.copyCommandParts;
+    final subCount = item.subdetails.length;
+    final canExpand = subCount > 0 || item.detail != null;
 
     final semantic = MdcSemanticColors.of(context);
 
@@ -66,6 +69,13 @@ class _ScanItemTileState extends State<ScanItemTile> {
                   'Comes back: ${item.regenerates.label}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
+                if (subCount > 1)
+                  Text(
+                    '$subCount targets — expand for details',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
                 if (item.preconditionHint != null)
                   Text(
                     item.preconditionHint!,
@@ -85,37 +95,18 @@ class _ScanItemTileState extends State<ScanItemTile> {
                     parts: copyParts,
                     dense: true,
                   ),
-                IconButton(
-                  icon: Icon(expanded ? Icons.expand_less : Icons.expand_more),
-                  tooltip: expanded ? 'Hide details' : 'Show paths and details',
-                  onPressed: () => setState(() => expanded = !expanded),
-                ),
+                if (canExpand)
+                  IconButton(
+                    icon: Icon(
+                      expanded ? Icons.expand_less : Icons.expand_more,
+                    ),
+                    tooltip: expanded ? 'Hide subitems' : 'Show subitems',
+                    onPressed: () => setState(() => expanded = !expanded),
+                  ),
               ],
             ),
           ),
-          if (expanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('ID: ${item.id}', style: context.monoLabelSmall),
-                  if (item.detail != null) Text(item.detail!),
-                  if (item.cleanAction?.commandDescription != null)
-                    Text(
-                      'Command: ${item.cleanAction!.commandDescription}',
-                      style: context.monoBodySmall,
-                    ),
-                  if (item.paths.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    for (final path in item.paths.take(8))
-                      Text(path, style: context.monoBodySmall),
-                    if (item.paths.length > 8)
-                      Text('… +${item.paths.length - 8} more'),
-                  ],
-                ],
-              ),
-            ),
+          if (expanded && canExpand) ScanItemExpandedDetails(item: item),
         ],
       ),
     );

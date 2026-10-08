@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
 import '../controller/cleaner_controller.dart';
-import 'copy_command_button.dart';
 import 'scan_activity_log.dart';
+import 'scan_item_subdetail_list.dart';
 
 String buildScanDetailsCopyText(CleanerController controller) {
   final buf = StringBuffer();
@@ -146,31 +146,23 @@ class _ItemDetailsList extends StatelessWidget {
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
-        final copyParts = item.copyCommandParts;
+        final subCount = item.subdetails.length;
+        final canExpand = subCount > 0 || item.detail != null;
+
         return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (copyParts.isNotEmpty)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: CopyCommandButton(
-                    itemName: item.name,
-                    parts: copyParts,
-                    iconSize: 16,
-                  ),
-                ),
-              SelectableText(
-                formatScanItemDetail(item, maxPaths: 8),
-                style: TextStyle(
-                  fontFamily: 'Menlo',
-                  fontSize: 11,
-                  height: 1.4,
-                  color: theme.colorScheme.onSurface,
-                ),
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Card(
+            margin: EdgeInsets.zero,
+            child: ExpansionTile(
+              initiallyExpanded: false,
+              title: Text(item.name, style: theme.textTheme.titleSmall),
+              subtitle: Text(
+                '${formatBytes(item.sizeBytes)} · ${item.risk.label}'
+                '${subCount > 1 ? ' · $subCount targets' : ''}',
+                style: theme.textTheme.bodySmall,
               ),
-            ],
+              children: [if (canExpand) ScanItemExpandedDetails(item: item)],
+            ),
           ),
         );
       },
@@ -192,15 +184,17 @@ String formatScanItemDetail(ScanItem item, {int? maxPaths}) {
   if (item.detail != null) {
     buf.writeln('  detail: ${item.detail}');
   }
-  if (item.cleanAction?.commandDescription != null) {
+  final subs = item.subdetails;
+  if (subs.isNotEmpty) {
+    final limited = maxPaths == null ? subs : subs.take(maxPaths);
+    for (final sub in limited) {
+      buf.writeln('  → ${sub.label}: ${sub.value}');
+    }
+    if (maxPaths != null && subs.length > maxPaths) {
+      buf.writeln('  → … +${subs.length - maxPaths} more');
+    }
+  } else if (item.cleanAction?.commandDescription != null) {
     buf.writeln('  cmd: ${item.cleanAction!.commandDescription}');
-  }
-  final paths = maxPaths == null ? item.paths : item.paths.take(maxPaths);
-  for (final path in paths) {
-    buf.writeln('  → $path');
-  }
-  if (maxPaths != null && item.paths.length > maxPaths) {
-    buf.writeln('  → … +${item.paths.length - maxPaths} paths');
   }
   return buf.toString().trimRight();
 }
