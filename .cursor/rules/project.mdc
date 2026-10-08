@@ -1,0 +1,23 @@
+---
+description: Mac Dev Cleaner repo layout, FVM tooling, and agent defaults
+alwaysApply: true
+---
+
+# Mac Dev Cleaner
+
+Monorepo: `packages/mac_dev_cleaner_core`, `apps/mac-dev-cleaner-cli`, `apps/mac_dev_cleaner` (Flutter macOS). Product: `product/product.md`, rules: `product/plan/PLAN.md`, decisions: `product/decisions/` (index `README.md`, one file per D0xx). Engineering docs: `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT.md`.
+
+## Tooling
+
+- Use **FVM only** for Dart/Flutter: `fvm dart`, `fvm flutter`, or `make` / `scripts/` (never bare `dart`/`flutter` in scripts or docs).
+- Prefer `make bootstrap`, `make analyze`, `make test`, `make check` from repo root.
+
+## Code changes
+
+- Keep diffs focused; match naming and patterns in the file you edit.
+- Core logic belongs in `mac_dev_cleaner_core`; UI in `apps/mac_dev_cleaner`; CLI in `apps/mac-dev-cleaner-cli/bin/mdc.dart`.
+- Do not commit secrets, keystores, or `.env` with credentials.
+
+## When unsure
+
+Read `docs/ARCHITECTURE.md` for platform boundaries (`DevCleanerHost`, `ScanEngine`, `DoctorEngine`) before adding OS-specific paths or rules.

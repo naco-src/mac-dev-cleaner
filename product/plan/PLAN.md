@@ -139,6 +139,10 @@ Whole Application Support folders, editor `User/settings` and `extensions`, brow
 
 ## 9. Open decisions (for implementation time)
 
+**Resolved** — see [decisions/README.md](../decisions/README.md) (D001–D015). Remaining open items: [open-deferred.md](../decisions/open-deferred.md).
+
+Historical prompts (answered in decision log):
+
 - Name of the tool and command (`mdc` is a placeholder).
 - CLI only, or also the Flutter macOS app.
 - Which folders count as project roots.

@@ -1,6 +1,17 @@
 # Mac Dev Cleaner
 
-CLI tool to **scan**, **plan**, and **clean** macOS developer caches (Xcode, Android, Flutter, Node, IDEs) with safety labels and Trash-by-default.
+CLI and Flutter app to **scan**, **plan**, and **clean** macOS developer caches (Xcode, Android, Flutter, Node, IDEs) with safety labels and Trash-by-default.
+
+## Documentation
+
+| Doc | Contents |
+| --- | --- |
+| [AGENTS.md](AGENTS.md) | Agent/ contributor hub, layout, non-negotiables |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Platform layer, scan/clean pipeline, multi-OS extension |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | FVM, Make, test, CI/release, troubleshooting |
+| [product/product.md](product/product.md) | Product overview (users, journeys, scope) |
+| [product/plan/PLAN.md](product/plan/PLAN.md) | v1 engineering plan & rule catalog |
+| [product/decisions/README.md](product/decisions/README.md) | MDC decisions (one file per D001–D015) |
 
 ## Quick start
 

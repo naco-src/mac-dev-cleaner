@@ -1,0 +1,37 @@
+---
+description: mac_dev_cleaner_core — platform abstractions and scan/doctor/executor patterns
+globs: packages/mac_dev_cleaner_core/**
+alwaysApply: false
+---
+
+# Core package
+
+Public API: `package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart`. Entry type: `MacDevCleaner` → `DevCleanerHost` from `createDevCleanerHost()`.
+
+## Platform layer (`lib/src/platform/`)
+
+| Type | Role |
+| --- | --- |
+| `HostPlatform` / `currentHostPlatform()` | OS detection |
+| `HostPaths` | Cross-platform paths (home, trash, mdc, Gradle, pub, npm, Android) |
+| `MacOSPaths` / `MacOSHostPaths` | macOS Library / Xcode paths |
+| `ScanEngine` | Platform scan; macOS = `ScanService` |
+| `DoctorEngine` | Platform checks; macOS = `DoctorService` |
+| `DiskSpaceProvider` | macOS = `MacOSDiskSpaceProvider` |
+| `DevCleanerHost` | Bundles the above |
+
+New OS: implement host + engines; extend `host_factory.dart`. Do not put Linux paths inside `ScanService` without a separate engine class.
+
+## Scan performance
+
+- Phase-level parallelism in `scanAll`; size work via `mapConcurrent` / `SizeScanner` concurrency cap.
+- Progress: `ScanProgressCallback` + `ScanLogEntry` — log phases, not every file path unless adding opt-in verbose mode.
+
+## Dependencies
+
+- Prefer `file` `FileSystem` and `ProcessRunner` for testability; avoid raw `dart:io` in new code except platform gates and subprocess edge cases.
+- `MdcPaths` is a **typedef** for `MacOSHostPaths` (legacy name).
+
+## Tests
+
+Add tests under `packages/mac_dev_cleaner_core/test/`. Run `fvm dart test` or `make test`.

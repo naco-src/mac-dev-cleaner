@@ -1,0 +1,35 @@
+---
+description: Flutter macOS app — controller, screens, widgets, tests
+globs: apps/mac_dev_cleaner/**
+alwaysApply: false
+---
+
+# Flutter app (`mac_dev_cleaner`)
+
+macOS desktop UI; calls `MacDevCleaner` from core — **no duplicate scan rules** in widgets.
+
+## Structure
+
+- `lib/controller/cleaner_controller.dart` — `ChangeNotifier`: scan phase, items, selection, filters, treemap drill, doctor/history logs.
+- `lib/screens/` — Home (Results/Details tabs), Doctor, History.
+- `lib/widgets/` — tiles, treemap, activity log, FDA onboarding, plan dialog.
+- `lib/treemap/` — layout math (squarify), not platform code.
+
+## UI patterns
+
+- Scan progress: `ScanActivityLog` + `ScanLogEntry` from core; Doctor tab reuses log widget with custom title.
+- List checkboxes: only pass non-null `Checkbox.value` (disabled rows use `false` + `onChanged: null`).
+- Destructive clean: confirm via plan summary; respect Trash vs permanent delete flags from controller.
+
+## Run & test
+
+```bash
+make run-app
+make test   # includes flutter test for this app
+```
+
+Use **FVM** (`make` scripts already do). macOS entitlements: non-sandboxed for full disk scan; do not re-enable App Sandbox without product discussion.
+
+## Tests
+
+- Inject `CleanerController` with fake `ScanItem` lists; avoid hitting real filesystem in widget tests.

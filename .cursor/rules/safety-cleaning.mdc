@@ -1,0 +1,26 @@
+---
+description: Safety rules for scan/clean/doctor — no sudo, Trash default, protected items
+alwaysApply: true
+---
+
+# Cleaning safety
+
+Mac Dev Cleaner is a **developer cache** tool, not a general disk wiper.
+
+## Must not
+
+- Run **`sudo`** or embed privileged commands in core, CLI, or app.
+- **`rm -rf`** user home, all of `~/Library/Caches`, all of `~/.pub-cache`, or all Xcode Archives without the curated rules in `ScanService`.
+- Delete **iOS simulator runtimes** with filesystem delete — use `xcrun simctl runtime delete` only.
+- Delete **Android NDK** with `rm` — use `sdkmanager --uninstall` for listed versions.
+- Clean **`RiskLevel.protected`** items or omit `cleanAction` on new scan items that should be cleanable.
+
+## Defaults
+
+- **`CleanMethod.moveToTrash`** unless the PLAN explicitly requires a command (brew, npm, simctl, sdkmanager).
+- **Conditional** items: `selectedByDefault: false` unless PLAN says otherwise.
+- **Preconditions** (app running, npm ownership): set `preconditionMet` / `preconditionHint`; Doctor surfaces fixes as copyable commands for the **user** to run.
+
+## New scan rules
+
+Add to `ScanService` (macOS) with: stable `id`, `RuleGroup`, `RiskLevel`, `explain`, `regenerates`, accurate `sizeBytes`, and a vetted `CleanAction`. Cross-check `product/plan/PLAN.md`.

@@ -1,39 +1,32 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# mac_dev_cleaner_core
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+Platform-aware library for scanning, planning, and cleaning developer caches. Used by the `mdc` CLI and the Flutter app.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/tools/pub/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
-
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
-
-## Features
-
-TODO: List what your package can do. Maybe include images, gifs, or videos.
-
-## Getting started
-
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+## API
 
 ```dart
-const like = 'sample';
+import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
+
+final mdc = MacDevCleaner();
+final items = await mdc.scan(onProgress: (e) => print(e.message));
+final plan = mdc.plan(items, safeOnly: true);
+await mdc.doctorCheck(onProgress: (e) => print(e.message));
 ```
 
-## Additional information
+## Platform support
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+| OS | Status |
+| --- | --- |
+| macOS | Full (`MacOSDevCleanerHost`) |
+| Linux / Windows | Not implemented — `createDevCleanerHost()` throws |
+
+Extension points: `HostPaths`, `ScanEngine`, `DoctorEngine`, `DiskSpaceProvider`, `DevCleanerHost`.
+
+## Docs
+
+- Repo [ARCHITECTURE.md](../../docs/ARCHITECTURE.md)
+- [PLAN.md](../../product/plan/PLAN.md) — scan rule catalog
+
+## Develop
+
+From repo root: `make test` / `fvm dart test packages/mac_dev_cleaner_core`.
