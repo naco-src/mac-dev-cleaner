@@ -3,8 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'app.dart';
+import 'updater/desktop_updater_config.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (!Platform.isMacOS) {
     runApp(
@@ -16,5 +17,6 @@ void main() {
     );
     return;
   }
-  runApp(const MacDevCleanerApp());
+  final updaterController = await createDesktopUpdaterController();
+  runApp(MacDevCleanerApp(updaterController: updaterController));
 }

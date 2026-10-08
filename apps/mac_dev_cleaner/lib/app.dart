@@ -1,3 +1,4 @@
+import 'package:desktop_updater/desktop_updater.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,13 +9,14 @@ import 'screens/home_screen.dart';
 import 'widgets/fda_onboarding.dart';
 
 class MacDevCleanerApp extends StatelessWidget {
-  const MacDevCleanerApp({super.key, this.controller});
+  const MacDevCleanerApp({super.key, this.controller, this.updaterController});
 
   final CleanerController? controller;
+  final DesktopUpdaterController? updaterController;
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
+    final shell = ChangeNotifierProvider(
       create: (_) => controller ?? CleanerController()
         ..refreshDiskSpace(),
       child: MaterialApp(
@@ -26,6 +28,11 @@ class MacDevCleanerApp extends StatelessWidget {
         home: const _AppShell(),
       ),
     );
+    final updater = updaterController;
+    if (updater == null) {
+      return shell;
+    }
+    return DesktopUpdateWidget(controller: updater, child: shell);
   }
 }
 

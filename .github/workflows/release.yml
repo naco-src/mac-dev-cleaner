@@ -169,6 +169,27 @@ jobs:
           chmod +x tool/macos/*.sh tool/release-version.sh
           tool/macos/package-release-assets.sh
 
+      - name: Publish desktop_updater feed (arm64, GitHub Release)
+        env:
+          BUILD_NAME: ${{ needs.meta.outputs.version_name }}
+          BUILD_NUMBER: ${{ needs.meta.outputs.build_number }}
+          TAG: ${{ needs.meta.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          DESKTOP_UPDATER_KEY_BUNDLE_PASSPHRASE: ${{ secrets.DESKTOP_UPDATER_KEY_BUNDLE_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.DESKTOP_UPDATER_KEY_BUNDLE_BASE64 }}" ]; then
+            echo "Skipping desktop_updater publish: set DESKTOP_UPDATER_KEY_BUNDLE_BASE64 and DESKTOP_UPDATER_KEY_BUNDLE_PASSPHRASE to enable in-app updates."
+            exit 0
+          fi
+          bundle="${RUNNER_TEMP}/desktop-updater-release-key.dukey"
+          echo "${{ secrets.DESKTOP_UPDATER_KEY_BUNDLE_BASE64 }}" | base64 --decode > "${bundle}"
+          export DESKTOP_UPDATER_KEY_BUNDLE_PATH="${bundle}"
+          export MACOS_ARCH=arm64
+          export STAGE_DIR="${GITHUB_WORKSPACE}/.macos-staging/arm64"
+          chmod +x tool/macos/publish-desktop-updater.sh
+          tool/macos/publish-desktop-updater.sh
+
       - name: Upload assets to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

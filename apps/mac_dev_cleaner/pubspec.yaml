@@ -8,10 +8,12 @@ environment:
   sdk: ^3.13.0
 
 dependencies:
+  desktop_updater: ^3.2.1
   flutter:
     sdk: flutter
   mac_dev_cleaner_core:
     path: ../../packages/mac_dev_cleaner_core
+  path_provider: ^2.1.6
   provider: ^6.1.5
   shared_preferences: ^2.5.3
   url_launcher: ^6.3.2
