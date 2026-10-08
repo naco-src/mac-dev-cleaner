@@ -6,6 +6,7 @@ import 'controller/cleaner_controller.dart';
 import 'screens/doctor_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/home_screen.dart';
+import 'updater/desktop_update_shell.dart';
 import 'widgets/fda_onboarding.dart';
 
 class MacDevCleanerApp extends StatelessWidget {
@@ -19,7 +20,7 @@ class MacDevCleanerApp extends StatelessWidget {
     final updater = updaterController;
     Widget home = _AppShell(updaterController: updater);
     if (updater != null) {
-      home = DesktopUpdateWidget(controller: updater, child: home);
+      home = DesktopUpdateShell(controller: updater, child: home);
     }
     return ChangeNotifierProvider(
       create: (_) => controller ?? CleanerController()
