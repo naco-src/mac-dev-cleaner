@@ -158,7 +158,8 @@ class _ItemDetailsList extends StatelessWidget {
               title: Text(item.name, style: theme.textTheme.titleSmall),
               subtitle: Text(
                 '${formatBytes(item.sizeBytes)} · ${item.risk.label}'
-                '${subCount > 1 ? ' · $subCount targets' : ''}',
+                '${subCount > 1 ? ' · $subCount targets' : ''}'
+                '${subCount == 1 && item.risk == RiskLevel.protected ? ' · 1 folder' : ''}',
                 style: theme.textTheme.bodySmall,
               ),
               children: [if (canExpand) ScanItemExpandedDetails(item: item)],

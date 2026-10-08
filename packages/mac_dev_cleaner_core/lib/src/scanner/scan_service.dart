@@ -820,32 +820,61 @@ class ScanService implements ScanEngine {
       ),
       ('android-sdk-total', 'Android SDK (report only)', paths.androidSdk),
     ];
-    final sized = await mapConcurrent(
+    final built = await mapConcurrent(
       reports,
-      (r) async => (r, await _sizes.directorySize(r.$3)),
+      (r) async => _protectedReportItem(r.$1, r.$2, r.$3),
       concurrency: scanConcurrency,
     );
-    final items = <ScanItem>[];
-    for (final (r, size) in sized) {
+    return built.whereType<ScanItem>().toList();
+  }
+
+  Future<ScanItem?> _protectedReportItem(
+    String id,
+    String name,
+    String root,
+  ) async {
+    final dir = fileSystem.directory(root);
+    if (!dir.existsSync()) {
+      return null;
+    }
+
+    final children = dir.listSync().map((e) => e.path).toList();
+    if (children.isEmpty) {
+      final size = await _sizes.directorySize(root);
       if (size == 0) {
-        continue;
+        return null;
       }
-      items.add(
-        ScanItem(
-          id: r.$1,
-          name: r.$2,
-          group: RuleGroup.macos,
-          risk: RiskLevel.protected,
-          explain: 'Shown for context; never deleted by mdc.',
-          regenerates: RegeneratesKind.never,
-          sizeBytes: size,
-          paths: [r.$3],
-          pathSizes: {r.$3: size},
-          selectedByDefault: false,
-        ),
+      return ScanItem(
+        id: id,
+        name: name,
+        group: RuleGroup.macos,
+        risk: RiskLevel.protected,
+        explain: 'Shown for context; never deleted by mdc.',
+        regenerates: RegeneratesKind.never,
+        sizeBytes: size,
+        paths: [root],
+        pathSizes: {root: size},
+        selectedByDefault: false,
       );
     }
-    return items;
+
+    final breakdown = await _sizes.pathBreakdown(children);
+    if (breakdown.totalBytes == 0) {
+      return null;
+    }
+
+    return ScanItem(
+      id: id,
+      name: name,
+      group: RuleGroup.macos,
+      risk: RiskLevel.protected,
+      explain: 'Shown for context; never deleted by mdc.',
+      regenerates: RegeneratesKind.never,
+      sizeBytes: breakdown.totalBytes,
+      paths: children,
+      pathSizes: breakdown.byPath,
+      selectedByDefault: false,
+    );
   }
 
   Future<int> _brewReclaimEstimate() async {

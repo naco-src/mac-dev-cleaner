@@ -70,7 +70,16 @@ class _ScanItemTileState extends State<ScanItemTile> {
                   'Comes back: ${item.regenerates.label}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
-                if (subCount > 1)
+                if (subCount > 0 && item.risk == RiskLevel.protected)
+                  Text(
+                    subCount == 1
+                        ? 'Expand for folder breakdown'
+                        : '$subCount folders — expand for sizes',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  )
+                else if (subCount > 1)
                   Text(
                     '$subCount targets — expand for details',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(

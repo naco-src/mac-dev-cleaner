@@ -17,6 +17,31 @@ void main() {
     expect(item.subdetails.first.value, '/Users/me/Library/Foo');
   });
 
+  test('protected breakdown lists each child path with size', () {
+    final item = ScanItem(
+      id: 'app-support-total',
+      name: 'Application Support (report only)',
+      group: RuleGroup.macos,
+      risk: RiskLevel.protected,
+      explain: 'context',
+      regenerates: RegeneratesKind.never,
+      sizeBytes: 300,
+      paths: [
+        '/Users/me/Library/Application Support/Cursor',
+        '/Users/me/Library/Application Support/Google',
+      ],
+      pathSizes: {
+        '/Users/me/Library/Application Support/Cursor': 100,
+        '/Users/me/Library/Application Support/Google': 200,
+      },
+    );
+    expect(item.subdetails, hasLength(2));
+    expect(item.subdetails[0].label, 'Cursor');
+    expect(item.subdetails[0].sizeBytes, 100);
+    expect(item.subdetails[1].label, 'Google');
+    expect(item.subdetails[1].sizeBytes, 200);
+  });
+
   test('subdetails include per-path sizes from pathSizes', () {
     final item = ScanItem(
       id: 'multi',
