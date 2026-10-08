@@ -1,30 +1,35 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mac_dev_cleaner/app.dart';
+import 'package:mac_dev_cleaner/controller/cleaner_controller.dart';
+import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
-import 'package:mac_dev_cleaner/main.dart';
+ScanItem _fakeItem() {
+  return ScanItem(
+    id: 'test-item',
+    name: 'Test cache',
+    group: RuleGroup.macos,
+    risk: RiskLevel.safe,
+    explain: 'Test explain',
+    regenerates: RegeneratesKind.automatically,
+    sizeBytes: 1024,
+    selectedByDefault: true,
+    cleanAction: const CleanAction(
+      method: CleanMethod.moveToTrash,
+      paths: ['/tmp/test'],
+    ),
+  );
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('shows scan item from injected controller', (tester) async {
+    final controller = CleanerController(initialItems: [_fakeItem()]);
+    await tester.pumpWidget(MacDevCleanerApp(controller: controller));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Test cache'), findsOneWidget);
+    expect(
+      find.text('Tap Scan to find reclaimable developer caches.'),
+      findsNothing,
+    );
   });
 }

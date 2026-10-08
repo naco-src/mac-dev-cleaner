@@ -41,3 +41,13 @@ mdc scan
 - Protected locations are report-only.
 
 See [product/plan/PLAN.md](product/plan/PLAN.md) for the full rule catalog.
+
+## Flutter macOS app
+
+```bash
+cd apps/mac_dev_cleaner
+flutter pub get
+flutter run -d macos
+```
+
+Grant **Full Disk Access** to “Mac Dev Cleaner” when prompted (toolbar info icon to reopen the guide).
