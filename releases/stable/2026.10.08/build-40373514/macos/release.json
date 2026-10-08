@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 3,
+  "packageId": "io.github.nguyenhoangvannha.macDevCleaner",
+  "appName": "Mac Dev Cleaner.app",
+  "version": "2026.10.08",
+  "buildNumber": 40373514,
+  "platform": "macos",
+  "channel": "stable",
+  "artifact": {
+    "kind": "zip",
+    "url": "https://raw.githubusercontent.com/naco-src/mac-dev-cleaner/updates/releases/stable/2026.10.08/build-40373514/macos/Mac%20Dev%20Cleaner-2026.10.08-macos.zip",
+    "sha256": "e1516e09df19c61585646a69c9271737d44b6ee232284639d8781085acd54874",
+    "length": 19603287
+  },
+  "install": {
+    "strategy": "wholeBundleReplace"
+  },
+  "signature": {
+    "algorithm": "ed25519",
+    "publicKeyId": "release-09d9f482daf8fe781a793efc",
+    "value": "vw98TnvDCrpAkf/GoWWtiJMDlHOKu2gmHSWLLv8+iembZ9s/B0OyPUCxKY1bO0jDJTB/qIqy4rfzcrtToQLDDA=="
+  },
+  "minimumUpdaterVersion": "2.0.0",
+  "generatedAt": "2026-10-08T08:58:14.822491Z"
+}

@@ -1,30 +1,30 @@
 {
   "schemaVersion": 1,
   "baseUrl": "https://raw.githubusercontent.com/naco-src/mac-dev-cleaner/updates/",
-  "localRoot": "/var/folders/4x/crqsshl51b9b6gy00g92hwpw0000gn/T/desktop_updater_upload_i9wXsp/versioned-root",
+  "localRoot": "/var/folders/4x/crqsshl51b9b6gy00g92hwpw0000gn/T/desktop_updater_upload_D2vBkX/versioned-root",
   "appArchive": {
     "path": "app-archive.json",
     "url": "https://raw.githubusercontent.com/naco-src/mac-dev-cleaner/updates/app-archive.json"
   },
   "release": {
     "version": "2026.10.08",
-    "buildNumber": 40370810,
+    "buildNumber": 40373514,
     "platform": "macos",
     "channel": "stable",
-    "path": "releases/stable/2026.10.08/build-40370810/macos/release.json",
-    "url": "https://raw.githubusercontent.com/naco-src/mac-dev-cleaner/updates/releases/stable/2026.10.08/build-40370810/macos/release.json"
+    "path": "releases/stable/2026.10.08/build-40373514/macos/release.json",
+    "url": "https://raw.githubusercontent.com/naco-src/mac-dev-cleaner/updates/releases/stable/2026.10.08/build-40373514/macos/release.json"
   },
   "artifact": {
-    "path": "releases/stable/2026.10.08/build-40370810/macos/Mac Dev Cleaner-2026.10.08-macos.zip",
-    "url": "https://raw.githubusercontent.com/naco-src/mac-dev-cleaner/updates/releases/stable/2026.10.08/build-40370810/macos/Mac%20Dev%20Cleaner-2026.10.08-macos.zip",
+    "path": "releases/stable/2026.10.08/build-40373514/macos/Mac Dev Cleaner-2026.10.08-macos.zip",
+    "url": "https://raw.githubusercontent.com/naco-src/mac-dev-cleaner/updates/releases/stable/2026.10.08/build-40373514/macos/Mac%20Dev%20Cleaner-2026.10.08-macos.zip",
     "kind": "zip",
-    "sha256": "39fd1ead1739d1e87720e8ab67a210d23e63d26c785fb2eedc2802c3b8e63987",
-    "length": 19600560
+    "sha256": "e1516e09df19c61585646a69c9271737d44b6ee232284639d8781085acd54874",
+    "length": 19603287
   },
   "uploadPhase": "versioned",
   "allowedFiles": [
     ".desktop_updater_publish.json",
-    "releases/stable/2026.10.08/build-40370810/macos/release.json",
-    "releases/stable/2026.10.08/build-40370810/macos/Mac Dev Cleaner-2026.10.08-macos.zip"
+    "releases/stable/2026.10.08/build-40373514/macos/release.json",
+    "releases/stable/2026.10.08/build-40373514/macos/Mac Dev Cleaner-2026.10.08-macos.zip"
   ]
 }
