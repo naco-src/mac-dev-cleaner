@@ -1,8 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
 import '../controller/cleaner_controller.dart';
 import 'scan_activity_log.dart';
+
+String buildScanDetailsCopyText(CleanerController controller) {
+  final buf = StringBuffer();
+  if (controller.scanError != null) {
+    buf.writeln('Error: ${controller.scanError}');
+    buf.writeln();
+  }
+  if (controller.scanLogs.isNotEmpty) {
+    buf.writeln('=== Scan activity ===');
+    for (final entry in controller.scanLogs) {
+      buf.writeln('[${formatScanLogTime(entry.time)}] ${entry.message}');
+    }
+    buf.writeln();
+  }
+  if (controller.items.isNotEmpty) {
+    buf.writeln('=== Discovered items (${controller.items.length}) ===');
+    for (final item in controller.items) {
+      buf.writeln(formatScanItemDetail(item));
+      buf.writeln();
+    }
+  }
+  return buf.toString().trimRight();
+}
+
+String formatScanLogTime(DateTime time) {
+  final h = time.hour.toString().padLeft(2, '0');
+  final m = time.minute.toString().padLeft(2, '0');
+  final s = time.second.toString().padLeft(2, '0');
+  return '$h:$m:$s';
+}
 
 /// Activity log plus per-item breakdown (paths, commands, errors).
 class ScanDetailsPanel extends StatelessWidget {
@@ -24,9 +55,32 @@ class ScanDetailsPanel extends StatelessWidget {
       );
     }
 
+    final canCopy =
+        controller.scanLogs.isNotEmpty ||
+        controller.items.isNotEmpty ||
+        controller.scanError != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (canCopy)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                icon: const Icon(Icons.copy_all, size: 18),
+                label: const Text('Copy all'),
+                onPressed: () {
+                  final text = buildScanDetailsCopyText(controller);
+                  Clipboard.setData(ClipboardData(text: text));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Copied to clipboard')),
+                  );
+                },
+              ),
+            ),
+          ),
         if (phase == ScanPhase.scanning)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
@@ -94,7 +148,7 @@ class _ItemDetailsList extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: SelectableText(
-            _formatItem(item),
+            formatScanItemDetail(item, maxPaths: 8),
             style: TextStyle(
               fontFamily: 'Menlo',
               fontSize: 11,
@@ -106,32 +160,31 @@ class _ItemDetailsList extends StatelessWidget {
       },
     );
   }
+}
 
-  String _formatItem(ScanItem item) {
-    final buf = StringBuffer()
-      ..writeln(
-        '${item.id}  ${formatBytes(item.sizeBytes)}  ${item.risk.label}',
-      )
-      ..writeln('  ${item.name}')
-      ..writeln('  ${item.explain}')
-      ..writeln(
-        '  group: ${item.group.label}  regenerates: ${item.regenerates.label}',
-      );
-    if (item.preconditionHint != null) {
-      buf.writeln('  ⚠ ${item.preconditionHint}');
-    }
-    if (item.detail != null) {
-      buf.writeln('  detail: ${item.detail}');
-    }
-    if (item.cleanAction?.commandDescription != null) {
-      buf.writeln('  cmd: ${item.cleanAction!.commandDescription}');
-    }
-    for (final path in item.paths.take(8)) {
-      buf.writeln('  → $path');
-    }
-    if (item.paths.length > 8) {
-      buf.writeln('  → … +${item.paths.length - 8} paths');
-    }
-    return buf.toString().trimRight();
+String formatScanItemDetail(ScanItem item, {int? maxPaths}) {
+  final buf = StringBuffer()
+    ..writeln('${item.id}  ${formatBytes(item.sizeBytes)}  ${item.risk.label}')
+    ..writeln('  ${item.name}')
+    ..writeln('  ${item.explain}')
+    ..writeln(
+      '  group: ${item.group.label}  regenerates: ${item.regenerates.label}',
+    );
+  if (item.preconditionHint != null) {
+    buf.writeln('  ⚠ ${item.preconditionHint}');
   }
+  if (item.detail != null) {
+    buf.writeln('  detail: ${item.detail}');
+  }
+  if (item.cleanAction?.commandDescription != null) {
+    buf.writeln('  cmd: ${item.cleanAction!.commandDescription}');
+  }
+  final paths = maxPaths == null ? item.paths : item.paths.take(maxPaths);
+  for (final path in paths) {
+    buf.writeln('  → $path');
+  }
+  if (maxPaths != null && item.paths.length > maxPaths) {
+    buf.writeln('  → … +${item.paths.length - maxPaths} paths');
+  }
+  return buf.toString().trimRight();
 }
