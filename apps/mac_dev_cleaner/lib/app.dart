@@ -6,7 +6,6 @@ import 'controller/cleaner_controller.dart';
 import 'screens/doctor_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/home_screen.dart';
-import 'updater/desktop_update_shell.dart';
 import 'widgets/fda_onboarding.dart';
 
 class MacDevCleanerApp extends StatelessWidget {
@@ -18,10 +17,6 @@ class MacDevCleanerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final updater = updaterController;
-    Widget home = _AppShell(updaterController: updater);
-    if (updater != null) {
-      home = DesktopUpdateShell(controller: updater, child: home);
-    }
     return ChangeNotifierProvider(
       create: (_) => controller ?? CleanerController()
         ..refreshDiskSpace(),
@@ -31,7 +26,19 @@ class MacDevCleanerApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2D6A4F)),
           useMaterial3: true,
         ),
-        home: home,
+        builder: (context, child) {
+          if (updater == null || child == null) {
+            return child ?? const SizedBox.shrink();
+          }
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              child,
+              UpdateDialogListener(controller: updater),
+            ],
+          );
+        },
+        home: _AppShell(updaterController: updater),
       ),
     );
   }
@@ -76,15 +83,17 @@ class _AppShellState extends State<_AppShell> {
     if (controller == null) {
       return;
     }
-    try {
-      await controller.checkForUpdates();
-    } catch (e) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Update check failed: $e')));
+    final result = await controller.checkForUpdates();
+    if (!mounted) {
+      return;
     }
+    await showManualUpdateCheckResultDialog(
+      context,
+      controller: controller,
+      result: result,
+      // Available / policy / fresh-install: [UpdateDialogListener] shows the flow dialog.
+      showAvailableUpdate: false,
+    );
   }
 
   @override
