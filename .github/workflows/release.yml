@@ -1,6 +1,7 @@
 name: Release
 
-# Build unsigned macOS arm64 + x64 (.zip and .dmg) and publish a GitHub Release.
+# Manually build unsigned macOS arm64 + x64 (.zip and .dmg) on self-hosted
+# MYRUNNER (FVM/Flutter/JDK already installed). Publishes a GitHub Release.
 on:
   workflow_dispatch:
     inputs:
@@ -23,7 +24,7 @@ on:
         default: false
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -32,14 +33,32 @@ concurrency:
 jobs:
   meta:
     name: Resolve metadata
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, MYRUNNER]
+    permissions:
+      contents: write
     outputs:
       tag: ${{ steps.meta.outputs.tag }}
       release_name: ${{ steps.meta.outputs.release_name }}
       version_name: ${{ steps.meta.outputs.version_name }}
       build_number: ${{ steps.meta.outputs.build_number }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Reset workspace before checkout
+        run: |
+          set -euo pipefail
+          ws="${GITHUB_WORKSPACE:?}"
+          case "${ws}" in
+            "/"*"/_work/"*) ;;
+            *) exit 0 ;;
+          esac
+          if [ -d "${ws}/.git" ]; then
+            git -C "${ws}" sparse-checkout disable 2>/dev/null || true
+          fi
+          find "${ws}" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          clean: true
 
       - name: Resolve build metadata
         id: meta
@@ -49,6 +68,12 @@ jobs:
           INPUT_RELEASE_NAME: ${{ inputs.release_name }}
         run: |
           set -euo pipefail
+          cd "${GITHUB_WORKSPACE}"
+          if [ ! -f ./tool/release-version.sh ]; then
+            echo "Checkout missing tool/release-version.sh"
+            ls -la
+            exit 1
+          fi
           eval "$(./tool/release-version.sh)"
           tag="${INPUT_TAG}"
           if [ -z "${tag}" ]; then
@@ -99,18 +124,39 @@ jobs:
             --draft \
             --notes-file "${RUNNER_TEMP}/release-notes.txt"
 
+      - name: Delete workspace from disk
+        if: always()
+        uses: ./.github/actions/cleanup-self-hosted-workspace
+
   build_macos:
     name: Build macOS
     needs: meta
-    runs-on: macos-latest
+    runs-on: [self-hosted, macOS, MYRUNNER]
     timeout-minutes: 90
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Reset workspace before checkout
+        run: |
+          set -euo pipefail
+          ws="${GITHUB_WORKSPACE:?}"
+          case "${ws}" in
+            "/"*"/_work/"*) ;;
+            *) exit 0 ;;
+          esac
+          if [ -d "${ws}/.git" ]; then
+            git -C "${ws}" sparse-checkout disable 2>/dev/null || true
+          fi
+          find "${ws}" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 
-      - uses: subosito/flutter-action@v2
+      - name: Checkout
+        uses: actions/checkout@v5
         with:
-          channel: stable
-          cache: true
+          clean: true
+
+      - name: Export FVM CLI
+        run: |
+          echo "MDC_FLUTTER=fvm flutter" >> "$GITHUB_ENV"
 
       - name: Build and package macOS (arm64 + x64)
         env:
@@ -132,11 +178,37 @@ jobs:
           chmod +x tool/ci/gh-release-upload.sh
           tool/ci/gh-release-upload.sh "${TAG}" "mac-dev-cleaner-${TAG}-macos-*"
 
+      - name: Delete workspace from disk
+        if: always()
+        uses: ./.github/actions/cleanup-self-hosted-workspace
+
   github_release:
     name: Publish GitHub Release
     needs: [meta, build_macos]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, MYRUNNER]
+    permissions:
+      contents: write
     steps:
+      - name: Reset workspace before checkout
+        run: |
+          set -euo pipefail
+          ws="${GITHUB_WORKSPACE:?}"
+          case "${ws}" in
+            "/"*"/_work/"*) ;;
+            *) exit 0 ;;
+          esac
+          if [ -d "${ws}/.git" ]; then
+            git -C "${ws}" sparse-checkout disable 2>/dev/null || true
+          fi
+          find "${ws}" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - name: Checkout CI scripts
+        uses: actions/checkout@v5
+        with:
+          clean: true
+          sparse-checkout: tool/ci
+          sparse-checkout-cone-mode: false
+
       - name: Finalize GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -156,3 +228,7 @@ jobs:
           fi
           gh "${args[@]}"
           gh release view "${TAG}" --json assets --jq '.assets | length'
+
+      - name: Delete workspace from disk
+        if: always()
+        run: bash tool/ci/cleanup-self-hosted-workspace.sh

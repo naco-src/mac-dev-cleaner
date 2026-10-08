@@ -1,0 +1,12 @@
+name: Clean up self-hosted workspace
+description: |
+  Permanently removes checkout and build files from the job workspace.
+  Use as the last step (if: always) on self-hosted runners. See
+  tool/ci/cleanup-self-hosted-workspace.sh.
+
+runs:
+  using: composite
+  steps:
+    - name: Remove workspace contents
+      shell: bash
+      run: bash "${GITHUB_WORKSPACE}/tool/ci/cleanup-self-hosted-workspace.sh"
