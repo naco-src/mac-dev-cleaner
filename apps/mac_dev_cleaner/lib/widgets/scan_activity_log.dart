@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
+import '../theme/mdc_theme.dart';
+
 class ScanActivityLog extends StatefulWidget {
   const ScanActivityLog({
     super.key,
@@ -54,9 +56,10 @@ class _ScanActivityLogState extends State<ScanActivityLog> {
       itemCount: widget.entries.length,
       itemBuilder: (context, index) {
         final entry = widget.entries[index];
+        final semantic = MdcSemanticColors.of(context);
         final color = switch (entry.level) {
           ScanLogLevel.info => theme.colorScheme.onSurface,
-          ScanLogLevel.warning => Colors.orange.shade800,
+          ScanLogLevel.warning => semantic.logWarning,
           ScanLogLevel.error => theme.colorScheme.error,
         };
         final time = _formatTime(entry.time);
@@ -65,7 +68,7 @@ class _ScanActivityLogState extends State<ScanActivityLog> {
           child: SelectableText(
             '[$time] ${entry.message}',
             style: TextStyle(
-              fontFamily: 'Menlo',
+              fontFamilyFallback: kMdcMonospaceFamily,
               fontSize: 11,
               height: 1.35,
               color: color,

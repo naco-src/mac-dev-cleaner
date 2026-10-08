@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'app.dart';
+import 'theme/theme_mode_controller.dart';
 import 'updater/desktop_updater_config.dart';
 
 Future<void> main() async {
@@ -18,5 +19,11 @@ Future<void> main() async {
     return;
   }
   final updaterController = await createDesktopUpdaterController();
-  runApp(MacDevCleanerApp(updaterController: updaterController));
+  final themeModeController = await ThemeModeController.load();
+  runApp(
+    MacDevCleanerApp(
+      updaterController: updaterController,
+      themeModeController: themeModeController,
+    ),
+  );
 }

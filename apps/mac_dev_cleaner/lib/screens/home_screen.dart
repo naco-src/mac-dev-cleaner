@@ -316,7 +316,8 @@ class _Footer extends StatelessWidget {
   Widget build(BuildContext context) {
     final plan = controller.currentPlan;
     return Material(
-      elevation: 4,
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(

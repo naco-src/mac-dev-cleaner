@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
+import '../theme/mdc_theme.dart';
+
 Color groupColor(RuleGroup group) {
   return switch (group) {
     RuleGroup.xcode => const Color(0xFF5C6BC0),
@@ -15,10 +17,11 @@ Color groupColor(RuleGroup group) {
   };
 }
 
-Color riskBorderColor(RiskLevel risk) {
+Color riskBorderColor(RiskLevel risk, BuildContext context) {
+  final semantic = MdcSemanticColors.of(context);
   return switch (risk) {
-    RiskLevel.safe => Colors.green.shade700,
-    RiskLevel.conditional => Colors.orange.shade800,
-    RiskLevel.protected => Colors.blueGrey.shade600,
+    RiskLevel.safe => semantic.riskSafeFg,
+    RiskLevel.conditional => semantic.riskConditionalFg,
+    RiskLevel.protected => semantic.riskProtectedFg,
   };
 }

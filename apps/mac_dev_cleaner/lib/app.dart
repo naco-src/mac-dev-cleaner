@@ -6,40 +6,58 @@ import 'controller/cleaner_controller.dart';
 import 'screens/doctor_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/home_screen.dart';
+import 'theme/mdc_theme.dart';
+import 'theme/theme_mode_controller.dart';
 import 'widgets/fda_onboarding.dart';
 
 class MacDevCleanerApp extends StatelessWidget {
-  const MacDevCleanerApp({super.key, this.controller, this.updaterController});
+  const MacDevCleanerApp({
+    super.key,
+    this.controller,
+    this.updaterController,
+    this.themeModeController,
+  });
 
   final CleanerController? controller;
   final DesktopUpdaterController? updaterController;
+  final ThemeModeController? themeModeController;
 
   @override
   Widget build(BuildContext context) {
     final updater = updaterController;
-    return ChangeNotifierProvider(
-      create: (_) => controller ?? CleanerController()
-        ..refreshDiskSpace(),
-      child: MaterialApp(
-        title: 'Mac Dev Cleaner',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2D6A4F)),
-          useMaterial3: true,
-        ),
-        builder: (context, child) {
-          if (updater == null || child == null) {
-            return child ?? const SizedBox.shrink();
-          }
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              child,
-              UpdateDialogListener(controller: updater),
-            ],
-          );
-        },
-        home: _AppShell(updaterController: updater),
-      ),
+    final themeCtrl = themeModeController ?? ThemeModeController();
+    return ListenableBuilder(
+      listenable: themeCtrl,
+      builder: (context, _) {
+        return MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: themeCtrl),
+            ChangeNotifierProvider(
+              create: (_) => controller ?? CleanerController()
+                ..refreshDiskSpace(),
+            ),
+          ],
+          child: MaterialApp(
+            title: 'Mac Dev Cleaner',
+            theme: buildMdcLightTheme(),
+            darkTheme: buildMdcDarkTheme(),
+            themeMode: themeCtrl.mode,
+            builder: (context, child) {
+              if (updater == null || child == null) {
+                return child ?? const SizedBox.shrink();
+              }
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  child,
+                  UpdateDialogListener(controller: updater),
+                ],
+              );
+            },
+            home: _AppShell(updaterController: updater),
+          ),
+        );
+      },
     );
   }
 }
@@ -98,14 +116,21 @@ class _AppShellState extends State<_AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final themeCtrl = context.watch<ThemeModeController>();
     const destinations = [
-      NavigationRailDestination(icon: Icon(Icons.list), label: Text('Scan')),
+      NavigationRailDestination(
+        icon: Icon(Icons.list_outlined),
+        selectedIcon: Icon(Icons.list),
+        label: Text('Scan'),
+      ),
       NavigationRailDestination(
         icon: Icon(Icons.medical_services_outlined),
+        selectedIcon: Icon(Icons.medical_services),
         label: Text('Doctor'),
       ),
       NavigationRailDestination(
-        icon: Icon(Icons.history),
+        icon: Icon(Icons.history_outlined),
+        selectedIcon: Icon(Icons.history),
         label: Text('History'),
       ),
     ];
@@ -120,6 +145,11 @@ class _AppShellState extends State<_AppShell> {
       appBar: AppBar(
         title: const Text('Mac Dev Cleaner'),
         actions: [
+          IconButton(
+            icon: Icon(themeCtrl.iconForMode()),
+            tooltip: themeCtrl.tooltipForMode(),
+            onPressed: () => themeCtrl.cycleMode(),
+          ),
           if (widget.updaterController != null)
             IconButton(
               icon: const Icon(Icons.system_update_alt_outlined),

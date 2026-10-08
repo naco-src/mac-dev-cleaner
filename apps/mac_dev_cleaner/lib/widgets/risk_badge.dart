@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
+import '../theme/mdc_theme.dart';
+
 class RiskBadge extends StatelessWidget {
   const RiskBadge({super.key, required this.risk});
 
@@ -8,26 +10,34 @@ class RiskBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final semantic = MdcSemanticColors.of(context);
     final (color, bg) = switch (risk) {
-      RiskLevel.safe => (Colors.green.shade800, Colors.green.shade50),
-      RiskLevel.conditional => (Colors.orange.shade900, Colors.orange.shade50),
+      RiskLevel.safe => (semantic.riskSafeFg, semantic.riskSafeBg),
+      RiskLevel.conditional => (
+        semantic.riskConditionalFg,
+        semantic.riskConditionalBg,
+      ),
       RiskLevel.protected => (
-        Colors.blueGrey.shade800,
-        Colors.blueGrey.shade100,
+        semantic.riskProtectedFg,
+        semantic.riskProtectedBg,
       ),
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        risk.label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: color,
+    return Semantics(
+      label: '${risk.label} risk',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Text(
+          risk.label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
         ),
       ),
     );

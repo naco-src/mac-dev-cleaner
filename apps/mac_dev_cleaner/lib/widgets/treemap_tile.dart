@@ -28,7 +28,10 @@ class TreemapTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showLabel = rect.width > 56 && rect.height > 36;
-    final borderColor = risk != null ? riskBorderColor(risk!) : Colors.black26;
+    final scheme = Theme.of(context).colorScheme;
+    final borderColor = risk != null
+        ? riskBorderColor(risk!, context)
+        : scheme.outline.withValues(alpha: 0.5);
     final borderWidth = selected ? 3.0 : 1.0;
 
     final child = Material(
