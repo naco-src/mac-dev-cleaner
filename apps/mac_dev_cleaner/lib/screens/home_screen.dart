@@ -5,6 +5,9 @@ import 'package:provider/provider.dart';
 import '../controller/cleaner_controller.dart';
 import '../widgets/plan_summary_dialog.dart';
 import '../widgets/scan_item_tile.dart';
+import '../widgets/scan_treemap_view.dart';
+
+enum _ScanViewMode { list, treemap }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _searchController = TextEditingController();
   bool _permanentDelete = false;
+  _ScanViewMode _viewMode = _ScanViewMode.list;
 
   @override
   void dispose() {
@@ -34,8 +38,12 @@ class _HomeScreenState extends State<HomeScreen> {
             _Toolbar(
               controller: controller,
               searchController: _searchController,
+              viewMode: _viewMode,
+              onViewModeChanged: (m) => setState(() => _viewMode = m),
             ),
-            Expanded(child: _ItemList(controller: controller)),
+            Expanded(
+              child: _ScanBody(controller: controller, viewMode: _viewMode),
+            ),
             _Footer(
               controller: controller,
               permanentDelete: _permanentDelete,
@@ -87,11 +95,58 @@ class _DiskHeader extends StatelessWidget {
   }
 }
 
+class _ScanBody extends StatelessWidget {
+  const _ScanBody({required this.controller, required this.viewMode});
+
+  final CleanerController controller;
+  final _ScanViewMode viewMode;
+
+  @override
+  Widget build(BuildContext context) {
+    if (controller.scanPhase == ScanPhase.idle) {
+      return const Center(
+        child: Text('Tap Scan to find reclaimable developer caches.'),
+      );
+    }
+    if (controller.scanPhase == ScanPhase.error) {
+      return Center(child: Text('Scan failed: ${controller.scanError}'));
+    }
+    if (controller.scanPhase == ScanPhase.scanning &&
+        controller.items.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Scanning — this can take several minutes…'),
+          ],
+        ),
+      );
+    }
+    if (controller.visibleItems.isEmpty) {
+      return const Center(child: Text('No items match filters.'));
+    }
+
+    if (viewMode == _ScanViewMode.treemap) {
+      return const ScanTreemapView();
+    }
+    return _ItemList(controller: controller);
+  }
+}
+
 class _Toolbar extends StatelessWidget {
-  const _Toolbar({required this.controller, required this.searchController});
+  const _Toolbar({
+    required this.controller,
+    required this.searchController,
+    required this.viewMode,
+    required this.onViewModeChanged,
+  });
 
   final CleanerController controller;
   final TextEditingController searchController;
+  final _ScanViewMode viewMode;
+  final ValueChanged<_ScanViewMode> onViewModeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -108,6 +163,22 @@ class _Toolbar extends StatelessWidget {
                 : () => controller.runScan(),
             icon: const Icon(Icons.search),
             label: const Text('Scan'),
+          ),
+          SegmentedButton<_ScanViewMode>(
+            segments: const [
+              ButtonSegment(
+                value: _ScanViewMode.list,
+                label: Text('List'),
+                icon: Icon(Icons.list),
+              ),
+              ButtonSegment(
+                value: _ScanViewMode.treemap,
+                label: Text('Treemap'),
+                icon: Icon(Icons.grid_view),
+              ),
+            ],
+            selected: {viewMode},
+            onSelectionChanged: (s) => onViewModeChanged(s.first),
           ),
           FilterChip(
             label: const Text('Safe only'),
@@ -147,32 +218,7 @@ class _ItemList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (controller.scanPhase == ScanPhase.idle) {
-      return const Center(
-        child: Text('Tap Scan to find reclaimable developer caches.'),
-      );
-    }
-    if (controller.scanPhase == ScanPhase.error) {
-      return Center(child: Text('Scan failed: ${controller.scanError}'));
-    }
-    if (controller.scanPhase == ScanPhase.scanning &&
-        controller.items.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Scanning — this can take several minutes…'),
-          ],
-        ),
-      );
-    }
-
     final visible = controller.visibleItems;
-    if (visible.isEmpty) {
-      return const Center(child: Text('No items match filters.'));
-    }
 
     return Column(
       children: [

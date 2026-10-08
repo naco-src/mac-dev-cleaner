@@ -35,6 +35,8 @@ class CleanerController extends ChangeNotifier {
   bool cleanInProgress = false;
   CleanResult? lastCleanResult;
 
+  RuleGroup? treemapDrillGroup;
+
   List<ScanItem> get visibleItems {
     var list = items;
     if (groupFilter != null) {
@@ -68,9 +70,31 @@ class CleanerController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Map<RuleGroup, int> groupTotals(List<ScanItem> visible) {
+    final map = <RuleGroup, int>{};
+    for (final item in visible) {
+      if (item.sizeBytes <= 0) {
+        continue;
+      }
+      map[item.group] = (map[item.group] ?? 0) + item.sizeBytes;
+    }
+    return map;
+  }
+
+  void drillIntoGroup(RuleGroup group) {
+    treemapDrillGroup = group;
+    notifyListeners();
+  }
+
+  void treemapBack() {
+    treemapDrillGroup = null;
+    notifyListeners();
+  }
+
   Future<void> runScan() async {
     scanPhase = ScanPhase.scanning;
     scanError = null;
+    treemapDrillGroup = null;
     notifyListeners();
     try {
       items = await runScanOffMainThread();

@@ -3,15 +3,19 @@ import 'package:mac_dev_cleaner/app.dart';
 import 'package:mac_dev_cleaner/controller/cleaner_controller.dart';
 import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
-ScanItem _fakeItem() {
+ScanItem _fakeItem({
+  required String id,
+  required RuleGroup group,
+  int size = 1024,
+}) {
   return ScanItem(
-    id: 'test-item',
-    name: 'Test cache',
-    group: RuleGroup.macos,
+    id: id,
+    name: 'Item $id',
+    group: group,
     risk: RiskLevel.safe,
     explain: 'Test explain',
     regenerates: RegeneratesKind.automatically,
-    sizeBytes: 1024,
+    sizeBytes: size,
     selectedByDefault: true,
     cleanAction: const CleanAction(
       method: CleanMethod.moveToTrash,
@@ -22,14 +26,30 @@ ScanItem _fakeItem() {
 
 void main() {
   testWidgets('shows scan item from injected controller', (tester) async {
-    final controller = CleanerController(initialItems: [_fakeItem()]);
+    final controller = CleanerController(
+      initialItems: [_fakeItem(id: 'a', group: RuleGroup.macos)],
+    );
     await tester.pumpWidget(MacDevCleanerApp(controller: controller));
     await tester.pumpAndSettle();
 
-    expect(find.text('Test cache'), findsOneWidget);
-    expect(
-      find.text('Tap Scan to find reclaimable developer caches.'),
-      findsNothing,
+    expect(find.text('Item a'), findsOneWidget);
+  });
+
+  testWidgets('treemap shows group labels', (tester) async {
+    final controller = CleanerController(
+      initialItems: [
+        _fakeItem(id: 'x1', group: RuleGroup.xcode, size: 5000),
+        _fakeItem(id: 'a1', group: RuleGroup.android, size: 3000),
+      ],
     );
+    await tester.pumpWidget(MacDevCleanerApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Treemap'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Xcode'), findsWidgets);
+    expect(find.text('Android'), findsWidgets);
+    expect(find.text('All groups'), findsOneWidget);
   });
 }
