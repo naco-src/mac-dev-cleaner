@@ -68,6 +68,8 @@ Generate keys once in `apps/mac_dev_cleaner` (`desktop_updater.yaml` + `dart run
 
 **Release workflow:** When **Publish in-app update** is enabled, CI still undrafts the GitHub Release before publish (zip/dmg install artifacts). Do **not** combine **Pre-release** with **Publish in-app update** if you rely on draft/latest semantics elsewhere. The updater feed itself is branch-based and does not use `releases/latest/download`.
 
+**Private source repo:** `raw.githubusercontent.com` is unauthenticated; a **private** app repo returns 404 for the feed even after a successful push to branch `updates`. **Publish in-app update will fail validation** until [O6](../product/decisions/open-deferred.md) is implemented — see [in-app-updates-hosting.md](../product/plan/in-app-updates-hosting.md) (public updates mirror repo; not built yet).
+
 Local packaging mirrors CI: `tool/macos/package-release-assets.sh` with `BUILD_NAME`, `BUILD_NUMBER`, `TAG`.
 
 ## Project conventions
