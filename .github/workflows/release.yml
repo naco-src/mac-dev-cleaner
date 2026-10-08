@@ -14,7 +14,7 @@ on:
         required: false
         type: string
       notes:
-        description: "Release notes body. Leave blank for a short auto message."
+        description: "Release notes body. Leave blank to generate from commits since the previous v* tag."
         required: false
         type: string
       prerelease:
@@ -69,6 +69,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           clean: true
+          fetch-depth: 0
 
       - name: Resolve build metadata
         id: meta
@@ -108,14 +109,18 @@ jobs:
         env:
           INPUT_NOTES: ${{ inputs.notes }}
           TAG: ${{ steps.meta.outputs.tag }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
+          cd "${GITHUB_WORKSPACE}"
           if [ -n "${INPUT_NOTES}" ]; then
             printf '%s\n' "${INPUT_NOTES}" > "${RUNNER_TEMP}/release-notes.txt"
           else
-            printf 'Mac Dev Cleaner macOS release %s\n\nBuilt from commit %s\n' \
-              "${TAG}" "${GITHUB_SHA}" > "${RUNNER_TEMP}/release-notes.txt"
+            chmod +x tool/ci/generate-release-notes.sh
+            tool/ci/generate-release-notes.sh "${TAG}" > "${RUNNER_TEMP}/release-notes.txt"
           fi
+          echo "Release notes preview:"
+          head -n 40 "${RUNNER_TEMP}/release-notes.txt"
 
       - name: Create draft GitHub Release
         env:

@@ -55,7 +55,7 @@ Both workflows are **`workflow_dispatch` only**.
 | **CI** | `[self-hosted, macOS, MYRUNNER]` | `fvm install` → `make check` |
 | **Release** | same | meta → build macOS assets → publish release |
 
-Release uses `MDC_FLUTTER=fvm flutter`, workspace cleanup actions under `.github/actions/`, and `tool/ci/gh-release-upload.sh`.
+Release uses `MDC_FLUTTER=fvm flutter`, workspace cleanup actions under `.github/actions/`, `tool/ci/gh-release-upload.sh`, and `tool/ci/generate-release-notes.sh` (commit subjects since the previous `v*` tag when release notes are left blank).
 
 In-app updates use [desktop_updater](https://pub.dev/packages/desktop_updater) with the feed at `https://github.com/naco-src/mac-dev-cleaner/releases/latest/download/app-archive.json`. Updates are **optional** in the app (Check for updates in the toolbar; no check on launch). Release workflow: enable **Publish in-app update**; use **Mandatory update** only when you need a forced upgrade. Requires secrets:
 
