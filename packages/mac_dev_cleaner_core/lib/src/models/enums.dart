@@ -7,7 +7,8 @@ enum RuleGroup {
   ide('IDE'),
   browser('Browser'),
   projects('Projects'),
-  macos('macOS');
+  macos('macOS'),
+  linux('Linux');
 
   const RuleGroup(this.label);
   final String label;

@@ -7,8 +7,10 @@ import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 const version = '0.1.0';
 
 Future<void> main(List<String> arguments) async {
-  if (!Platform.isMacOS) {
-    stderr.writeln('mdc is intended for macOS only.');
+  if (!Platform.isMacOS && !Platform.isLinux) {
+    stderr.writeln(
+      'mdc supports macOS and Linux only (not ${Platform.operatingSystem}).',
+    );
     exitCode = 1;
     return;
   }
@@ -20,7 +22,7 @@ Future<void> main(List<String> arguments) async {
 
   final runner = CommandRunner<void>(
     'mdc',
-    'Mac Dev Cleaner — scan and clean developer caches safely.',
+    'Mac Dev Cleaner — scan and clean developer caches (macOS and Linux).',
   );
 
   runner.addCommand(ScanCommand());

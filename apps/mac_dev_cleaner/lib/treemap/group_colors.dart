@@ -14,6 +14,7 @@ Color groupColor(RuleGroup group) {
     RuleGroup.browser => const Color(0xFFEF5350),
     RuleGroup.projects => const Color(0xFF78909C),
     RuleGroup.macos => const Color(0xFF546E7A),
+    RuleGroup.linux => const Color(0xFF607D8B),
   };
 }
 

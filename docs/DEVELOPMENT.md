@@ -2,10 +2,10 @@
 
 ## Prerequisites
 
-- macOS (for app and current scan rules)
-- [FVM](https://fvm.app) on `PATH`
-- Xcode + CocoaPods (Flutter macOS builds)
-- Optional: Android SDK paths for conditional Android rules during local scan
+- **macOS** — full scan rules (Xcode, Homebrew, …); Flutter macOS needs Xcode + CocoaPods
+- **Linux** — CLI and Flutter desktop (`mdc` / app); GTK dev packages for `flutter run -d linux` (Ubuntu: `clang`, `cmake`, `ninja-build`, `pkg-config`, `libgtk-3-dev`)
+- [FVM](https://fvm.app) on `PATH` for Dart/Flutter in all environments
+- Optional: Android SDK paths (`ANDROID_SDK_ROOT` / `~/Android/Sdk` on Linux) for conditional Android rules during local scan
 
 ## First-time setup
 
@@ -22,7 +22,8 @@ All Makefile and `scripts/*` targets use **`fvm dart`** and **`fvm flutter`** vi
 | Goal | Command |
 | --- | --- |
 | CLI scan | `make cli-scan` or `make mdc ARGS='scan -v'` |
-| Run app | `make run-app` |
+| Run app (macOS) | `make run-app` |
+| Run app (Linux) | `cd apps/mac_dev_cleaner && fvm flutter run -d linux` |
 | Release .app | `make macos-release` |
 | arm64 + x64 zip/dmg | `make macos-packaging` |
 | Version env vars | `make release-version` |
@@ -52,7 +53,8 @@ Both workflows are **`workflow_dispatch` only**.
 
 | Workflow | Runner | Steps |
 | --- | --- | --- |
-| **CI** | `[self-hosted, macOS, MYRUNNER]` | `fvm install` → `make check` |
+| **CI (macOS)** | `[self-hosted, macOS, MYRUNNER]` | `fvm install` → `make check` |
+| **CI (Linux)** | `ubuntu-latest` | GTK deps → `fvm install` → `make check` |
 | **Release** | same | meta → build macOS assets → upload → (optional in-app publish) → finalize release |
 
 Release uses `MDC_FLUTTER=fvm flutter`, workspace cleanup actions under `.github/actions/`, `tool/ci/gh-release-upload.sh`, and `tool/ci/generate-release-notes.sh` (commit subjects since the previous `v*` tag when release notes are left blank).

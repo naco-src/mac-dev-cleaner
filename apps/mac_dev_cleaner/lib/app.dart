@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:desktop_updater/desktop_updater.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -81,6 +83,9 @@ class _AppShellState extends State<_AppShell> {
   }
 
   Future<void> _maybeShowFda() async {
+    if (!Platform.isMacOS) {
+      return;
+    }
     if (!mounted) {
       return;
     }
@@ -156,11 +161,12 @@ class _AppShellState extends State<_AppShell> {
               tooltip: 'Check for updates',
               onPressed: _checkForUpdates,
             ),
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            tooltip: 'Full Disk Access guide',
-            onPressed: _showFdaAgain,
-          ),
+          if (Platform.isMacOS)
+            IconButton(
+              icon: const Icon(Icons.info_outline),
+              tooltip: 'Full Disk Access guide',
+              onPressed: _showFdaAgain,
+            ),
         ],
       ),
       body: Row(

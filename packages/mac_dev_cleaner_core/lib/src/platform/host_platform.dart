@@ -6,7 +6,8 @@ enum HostPlatform {
   windows,
   unknown;
 
-  bool get isSupported => this == HostPlatform.macos;
+  bool get isSupported =>
+      this == HostPlatform.macos || this == HostPlatform.linux;
 }
 
 HostPlatform currentHostPlatform() {

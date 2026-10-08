@@ -18,7 +18,8 @@ await mdc.doctorCheck(onProgress: (e) => print(e.message));
 | OS | Status |
 | --- | --- |
 | macOS | Full (`MacOSDevCleanerHost`) |
-| Linux / Windows | Not implemented — `createDevCleanerHost()` throws |
+| Linux | Full (`LinuxDevCleanerHost`; no Xcode rules) |
+| Windows | Not implemented — `createDevCleanerHost()` throws |
 
 Extension points: `HostPaths`, `ScanEngine`, `DoctorEngine`, `DiskSpaceProvider`, `DevCleanerHost`.
 

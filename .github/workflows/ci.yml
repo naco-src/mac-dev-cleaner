@@ -16,3 +16,26 @@ jobs:
 
       - name: Bootstrap, analyze, test
         run: make check
+
+  linux-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          clean: true
+
+      - name: Install Linux desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
+
+      - name: Install FVM
+        run: |
+          curl -fsSL https://fvm.app/install.sh | bash
+          echo "$HOME/fvm/default/bin" >> "$GITHUB_PATH"
+
+      - name: Install FVM Flutter SDK (.fvmrc)
+        run: fvm install
+
+      - name: Bootstrap, analyze, test
+        run: make check

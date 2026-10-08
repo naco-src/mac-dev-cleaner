@@ -1,7 +1,7 @@
 # Mac Dev Cleaner — product overview
 
 **Command:** `mdc`  
-**Platforms:** macOS (full support today); Linux/Windows planned via core platform layer  
+**Platforms:** macOS and Linux (CLI + desktop app); Windows planned via core platform layer  
 **Distribution:** GitHub Releases (unsigned macOS `.zip` / `.dmg`); global CLI via `dart pub global activate`
 
 ## Problem
@@ -94,7 +94,8 @@ Full path/command catalog: [plan/PLAN.md](./plan/PLAN.md) §5.
 - Mac App Store distribution (app is non-sandboxed for accurate scans).
 - Cleaning non-developer categories (Photos, Mail, system caches outside dev rules).
 - Automatic scheduled clean without user review (optional future: scan-only report).
-- Windows/Linux UI (core may extend first).
+- Windows support (core + UI).
+- Linux GitHub Release / in-app update artifacts (macOS-only today).
 
 ## Success metrics (informal)
 

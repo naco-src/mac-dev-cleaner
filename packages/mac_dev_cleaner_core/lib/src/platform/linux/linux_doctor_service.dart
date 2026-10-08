@@ -1,25 +1,15 @@
-import '../io/process_runner.dart';
-import '../platform/doctor_engine.dart';
-import '../platform/host_paths.dart';
-import '../platform/macos/macos_paths.dart';
-import '../scanner/scan_log.dart';
+import '../../doctor/doctor_service.dart';
+import '../../doctor/npm_checks.dart';
+import '../../io/process_runner.dart';
+import '../../platform/doctor_engine.dart';
+import '../../platform/host_paths.dart';
+import '../../scanner/scan_log.dart';
+import 'linux_paths.dart';
 
-import 'dart:io' as io;
-
-import 'npm_checks.dart' as npm_checks;
-
-class DoctorIssue {
-  DoctorIssue({required this.title, required this.detail, this.fixCommand});
-
-  final String title;
-  final String detail;
-  final String? fixCommand;
-}
-
-/// macOS doctor checks; other platforms should provide their own [DoctorEngine].
-class DoctorService implements DoctorEngine {
-  DoctorService({required this.commandRunner, HostPaths? paths})
-    : paths = paths ?? MacOSHostPaths();
+/// Linux doctor checks; macOS uses [DoctorService].
+class LinuxDoctorService implements DoctorEngine {
+  LinuxDoctorService({required this.commandRunner, HostPaths? paths})
+    : paths = paths ?? LinuxHostPaths();
 
   final ProcessRunner commandRunner;
   final HostPaths paths;
@@ -53,18 +43,15 @@ class DoctorService implements DoctorEngine {
 
     log(ScanLogLevel.info, 'Doctor started');
     final results = await Future.wait<List<DoctorIssue>>([
-      phase('npm cache ownership', checkNpmOwnership),
-      phase('npm install path', checkSudoNpm),
-      phase('Homebrew', checkHomebrew),
+      phase(
+        'npm cache ownership',
+        () => checkNpmOwnership(commandRunner, paths),
+      ),
+      phase('npm install path', _checkSudoNpm),
+      phase('Homebrew', _checkHomebrewIfAvailable),
     ]);
-    log(ScanLogLevel.info, '→ Full Disk Access hint');
-    final fda = checkFullDiskAccessHint();
-    log(
-      ScanLogLevel.info,
-      '✓ Full Disk Access hint (${fda.length} note${fda.length == 1 ? '' : 's'})',
-    );
 
-    final issues = [...results[0], ...results[1], ...results[2], ...fda];
+    final issues = [...results[0], ...results[1], ...results[2]];
     log(
       ScanLogLevel.info,
       'Doctor finished — ${issues.length} item${issues.length == 1 ? '' : 's'} listed',
@@ -72,11 +59,7 @@ class DoctorService implements DoctorEngine {
     return issues;
   }
 
-  Future<List<DoctorIssue>> checkNpmOwnership() async {
-    return npm_checks.checkNpmOwnership(commandRunner, paths);
-  }
-
-  Future<List<DoctorIssue>> checkSudoNpm() async {
+  Future<List<DoctorIssue>> _checkSudoNpm() async {
     final result = await commandRunner.run('which', ['npm']);
     if (!result.success) {
       return [];
@@ -88,15 +71,18 @@ class DoctorService implements DoctorEngine {
         DoctorIssue(
           title: 'npm may have been installed with sudo',
           detail: npmPath,
-          fixCommand:
-              'Prefer nvm, fnm, or Homebrew node; avoid sudo npm install -g.',
+          fixCommand: 'Prefer nvm, fnm, or a user-level node install; avoid sudo npm install -g.',
         ),
       ];
     }
     return [];
   }
 
-  Future<List<DoctorIssue>> checkHomebrew() async {
+  Future<List<DoctorIssue>> _checkHomebrewIfAvailable() async {
+    final which = await commandRunner.run('which', ['brew']);
+    if (!which.success || which.stdout.trim().isEmpty) {
+      return [];
+    }
     final doctor = await commandRunner.run('brew', ['doctor']);
     if (doctor.success) {
       return [];
@@ -108,18 +94,6 @@ class DoctorService implements DoctorEngine {
             ? doctor.stderr.trim()
             : doctor.stdout.trim(),
         fixCommand: 'brew doctor',
-      ),
-    ];
-  }
-
-  List<DoctorIssue> checkFullDiskAccessHint() {
-    if (!io.Platform.isMacOS) {
-      return [];
-    }
-    return [
-      DoctorIssue(
-        title: 'Full Disk Access',
-        detail: 'If scan sizes look too small, add Terminal (or your IDE) under Privacy & Security → Full Disk Access.',
       ),
     ];
   }

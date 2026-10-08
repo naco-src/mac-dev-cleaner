@@ -248,7 +248,10 @@ ThemeData _buildMdcTheme(ColorScheme scheme, MdcSemanticColors semantic) {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     ),
     pageTransitionsTheme: const PageTransitionsTheme(
-      builders: {TargetPlatform.macOS: FadeUpwardsPageTransitionsBuilder()},
+      builders: {
+        TargetPlatform.macOS: FadeUpwardsPageTransitionsBuilder(),
+        TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+      },
     ),
   );
 }

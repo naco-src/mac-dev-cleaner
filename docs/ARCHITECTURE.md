@@ -14,9 +14,9 @@ Single library consumed by CLI and Flutter app.
 MacDevCleaner
   └── DevCleanerHost          (platform bundle; factory: createDevCleanerHost)
         ├── HostPaths         (home, trash, ~/.mdc, Gradle/pub/npm/Android, …)
-        ├── ScanEngine        (macOS: ScanService)
-        ├── DoctorEngine      (macOS: DoctorService)
-        └── DiskSpaceProvider (macOS: MacOSDiskSpaceProvider)
+        ├── ScanEngine        (macOS: ScanService; Linux: LinuxScanService)
+        ├── DoctorEngine      (macOS: DoctorService; Linux: LinuxDoctorService)
+        └── DiskSpaceProvider (macOS / Linux providers)
 ```
 
 **Cross-platform code** should depend on `HostPaths`, `ScanEngine`, and `DoctorEngine`, not macOS path types.
