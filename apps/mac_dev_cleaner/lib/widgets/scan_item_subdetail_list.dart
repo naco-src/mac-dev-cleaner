@@ -85,9 +85,20 @@ class _SubdetailRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  subdetail.label,
-                  style: Theme.of(context).textTheme.titleSmall,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        subdetail.label,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ),
+                    if (subdetail.sizeBytes != null)
+                      Text(
+                        formatBytes(subdetail.sizeBytes!),
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 2),
                 SelectableText(subdetail.value, style: context.monoBodySmall),

@@ -188,7 +188,10 @@ String formatScanItemDetail(ScanItem item, {int? maxPaths}) {
   if (subs.isNotEmpty) {
     final limited = maxPaths == null ? subs : subs.take(maxPaths);
     for (final sub in limited) {
-      buf.writeln('  → ${sub.label}: ${sub.value}');
+      final size = sub.sizeBytes != null
+          ? ' ${formatBytes(sub.sizeBytes!)}'
+          : '';
+      buf.writeln('  → ${sub.label}: ${sub.value}$size');
     }
     if (maxPaths != null && subs.length > maxPaths) {
       buf.writeln('  → … +${subs.length - maxPaths} more');

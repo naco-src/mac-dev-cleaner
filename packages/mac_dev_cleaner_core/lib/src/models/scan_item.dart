@@ -16,6 +16,7 @@ class ScanItem {
     this.preconditionMet = true,
     this.selectedByDefault = false,
     this.detail,
+    this.pathSizes = const {},
   });
 
   final String id;
@@ -31,6 +32,7 @@ class ScanItem {
   final bool preconditionMet;
   final bool selectedByDefault;
   final String? detail;
+  final Map<String, int> pathSizes;
 
   bool get cleanable =>
       cleanAction != null && risk != RiskLevel.protected && preconditionMet;
@@ -42,6 +44,7 @@ class ScanItem {
     bool? selectedByDefault,
     String? detail,
     List<String>? paths,
+    Map<String, int>? pathSizes,
   }) {
     return ScanItem(
       id: id,
@@ -57,6 +60,7 @@ class ScanItem {
       preconditionMet: preconditionMet ?? this.preconditionMet,
       selectedByDefault: selectedByDefault ?? this.selectedByDefault,
       detail: detail ?? this.detail,
+      pathSizes: pathSizes ?? this.pathSizes,
     );
   }
 }

@@ -2,6 +2,13 @@ import 'package:file/file.dart';
 
 import '../util/parallel.dart';
 
+class PathSizeBreakdown {
+  const PathSizeBreakdown({required this.totalBytes, required this.byPath});
+
+  final int totalBytes;
+  final Map<String, int> byPath;
+}
+
 /// Computes directory sizes without following symlinks; stays on one device when possible.
 class SizeScanner {
   SizeScanner(this.fileSystem, {int? concurrency})
@@ -19,16 +26,23 @@ class SizeScanner {
   }
 
   Future<int> pathsTotal(Iterable<String> paths) async {
+    return (await pathBreakdown(paths)).totalBytes;
+  }
+
+  /// Per-path byte sizes plus sum (same work as [pathsTotal]).
+  Future<PathSizeBreakdown> pathBreakdown(Iterable<String> paths) async {
     final list = paths.toList();
     if (list.isEmpty) {
-      return 0;
+      return const PathSizeBreakdown(totalBytes: 0, byPath: {});
     }
-    final sizes = await mapConcurrent(
+    final entries = await mapConcurrent(
       list,
-      _pathSize,
+      (path) async => MapEntry(path, await _pathSize(path)),
       concurrency: concurrency,
     );
-    return sizes.fold<int>(0, (sum, n) => sum + n);
+    final byPath = Map<String, int>.fromEntries(entries);
+    final total = byPath.values.fold<int>(0, (sum, n) => sum + n);
+    return PathSizeBreakdown(totalBytes: total, byPath: byPath);
   }
 
   Future<int> _pathSize(String path) async {

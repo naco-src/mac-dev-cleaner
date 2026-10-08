@@ -120,7 +120,7 @@ class ScanService implements ScanEngine {
           .listSync()
           .map((e) => e.path)
           .toList();
-      final size = await _sizes.pathsTotal(children);
+      final breakdown = await _sizes.pathBreakdown(children);
       items.add(
         ScanItem(
           id: 'xcode-derived-data',
@@ -129,8 +129,9 @@ class ScanService implements ScanEngine {
           risk: RiskLevel.safe,
           explain: 'Build artifacts and indexes Xcode can regenerate.',
           regenerates: RegeneratesKind.onNextBuild,
-          sizeBytes: size,
+          sizeBytes: breakdown.totalBytes,
           paths: children,
+          pathSizes: breakdown.byPath,
           selectedByDefault: true,
           cleanAction: CleanAction(
             method: CleanMethod.moveToTrash,
@@ -171,6 +172,7 @@ class ScanService implements ScanEngine {
           regenerates: RegeneratesKind.reDownload,
           sizeBytes: cocoapodsSize,
           paths: [cocoapods],
+          pathSizes: {cocoapods: cocoapodsSize},
           selectedByDefault: true,
           cleanAction: CleanAction(
             method: CleanMethod.moveToTrash,
@@ -210,6 +212,7 @@ class ScanService implements ScanEngine {
         regenerates: RegeneratesKind.reDownload,
         sizeBytes: npmSize,
         paths: [paths.npmCache],
+        pathSizes: {paths.npmCache: npmSize},
         selectedByDefault: npmOk && npmSize > 0,
         preconditionMet: npmOk,
         preconditionHint: npmOk
@@ -268,6 +271,7 @@ class ScanService implements ScanEngine {
             regenerates: RegeneratesKind.onNextBuild,
             sizeBytes: size,
             paths: [gradlePath],
+            pathSizes: {gradlePath: size},
             selectedByDefault: true,
             cleanAction: CleanAction(
               method: CleanMethod.moveToTrash,
@@ -291,6 +295,7 @@ class ScanService implements ScanEngine {
           regenerates: RegeneratesKind.onNextBuild,
           sizeBytes: abcSize,
           paths: [androidBuildCache],
+          pathSizes: {androidBuildCache: abcSize},
           selectedByDefault: true,
           cleanAction: CleanAction(
             method: CleanMethod.moveToTrash,
@@ -327,8 +332,8 @@ class ScanService implements ScanEngine {
         return null;
       }
       final cachePaths = _sizes.existingChildPaths(support, cacheFolderNames);
-      final size = await _sizes.pathsTotal(cachePaths);
-      if (size == 0) {
+      final breakdown = await _sizes.pathBreakdown(cachePaths);
+      if (breakdown.totalBytes == 0) {
         return null;
       }
       final running = await isAnyProcessRunning(commandRunner, editor.$3);
@@ -339,8 +344,9 @@ class ScanService implements ScanEngine {
         risk: RiskLevel.safe,
         explain: 'Editor cache folders only; settings and extensions stay.',
         regenerates: RegeneratesKind.automatically,
-        sizeBytes: size,
+        sizeBytes: breakdown.totalBytes,
         paths: cachePaths,
+        pathSizes: breakdown.byPath,
         selectedByDefault: !running,
         preconditionMet: !running,
         preconditionHint: running ? 'Quit ${editor.$2} before cleaning.' : null,
@@ -363,8 +369,8 @@ class ScanService implements ScanEngine {
         .listSync()
         .map((e) => e.path)
         .toList();
-    final size = await _sizes.pathsTotal(children);
-    if (size == 0) {
+    final breakdown = await _sizes.pathBreakdown(children);
+    if (breakdown.totalBytes == 0) {
       return [];
     }
     return [
@@ -375,8 +381,9 @@ class ScanService implements ScanEngine {
         risk: RiskLevel.safe,
         explain: 'Application logs under ~/Library/Logs.',
         regenerates: RegeneratesKind.automatically,
-        sizeBytes: size,
+        sizeBytes: breakdown.totalBytes,
         paths: children,
+        pathSizes: breakdown.byPath,
         selectedByDefault: true,
         cleanAction: CleanAction(
           method: CleanMethod.moveToTrash,
@@ -403,8 +410,8 @@ class ScanService implements ScanEngine {
         }
         uninstall.add(entity.path);
       }
-      final size = await _sizes.pathsTotal(uninstall);
-      if (size > 0) {
+      final breakdown = await _sizes.pathBreakdown(uninstall);
+      if (breakdown.totalBytes > 0) {
         final sdkmanager = paths.sdkmanagerBin ?? 'sdkmanager';
         final commands = uninstall
             .map((path) => '$sdkmanager --uninstall "ndk;${p.basename(path)}"')
@@ -417,8 +424,9 @@ class ScanService implements ScanEngine {
             risk: RiskLevel.conditional,
             explain: 'Keeps NDK versions from ndkVersion in Gradle files under project roots.',
             regenerates: RegeneratesKind.reDownload,
-            sizeBytes: size,
+            sizeBytes: breakdown.totalBytes,
             paths: uninstall,
+            pathSizes: breakdown.byPath,
             selectedByDefault: false,
             detail: keep.isEmpty
                 ? 'No ndkVersion found in projects; review before deleting.'
@@ -469,8 +477,8 @@ class ScanService implements ScanEngine {
           }
         }
       }
-      final size = await _sizes.pathsTotal(unused);
-      if (size > 0) {
+      final breakdown = await _sizes.pathBreakdown(unused);
+      if (breakdown.totalBytes > 0) {
         items.add(
           ScanItem(
             id: 'android-system-images-unused',
@@ -479,8 +487,9 @@ class ScanService implements ScanEngine {
             risk: RiskLevel.conditional,
             explain: 'Images not referenced by any AVD config.ini.',
             regenerates: RegeneratesKind.reDownload,
-            sizeBytes: size,
+            sizeBytes: breakdown.totalBytes,
             paths: unused,
+            pathSizes: breakdown.byPath,
             selectedByDefault: false,
             cleanAction: CleanAction(
               method: CleanMethod.moveToTrash,
@@ -503,6 +512,7 @@ class ScanService implements ScanEngine {
           regenerates: RegeneratesKind.reDownload,
           sizeBytes: pubSize,
           paths: [paths.pubCache],
+          pathSizes: {paths.pubCache: pubSize},
           selectedByDefault: false,
           cleanAction: CleanAction(
             method: CleanMethod.moveToTrash,
@@ -540,6 +550,9 @@ class ScanService implements ScanEngine {
           if (identifier.isEmpty) {
             continue;
           }
+          final runtimePaths = bundlePath != null && bundlePath.isNotEmpty
+              ? [bundlePath]
+              : const <String>[];
           items.add(
             ScanItem(
               id: 'ios-runtime-${identifier.replaceAll('.', '-')}',
@@ -549,6 +562,10 @@ class ScanService implements ScanEngine {
               explain: 'Removed with xcrun simctl runtime delete (never rm).',
               regenerates: RegeneratesKind.reDownload,
               sizeBytes: size,
+              paths: runtimePaths,
+              pathSizes: runtimePaths.isEmpty || size == 0
+                  ? const {}
+                  : {runtimePaths.single: size},
               selectedByDefault: false,
               cleanAction: CleanAction(
                 method: CleanMethod.runCommand,
@@ -582,8 +599,8 @@ class ScanService implements ScanEngine {
         }
         toRemove.addAll(archives.skip(2).map((d) => d.path));
       }
-      final size = await _sizes.pathsTotal(toRemove);
-      if (size > 0) {
+      final breakdown = await _sizes.pathBreakdown(toRemove);
+      if (breakdown.totalBytes > 0) {
         items.add(
           ScanItem(
             id: 'xcode-archives-old',
@@ -592,8 +609,9 @@ class ScanService implements ScanEngine {
             risk: RiskLevel.conditional,
             explain: 'Older archives may hold dSYMs; newest two per app kept.',
             regenerates: RegeneratesKind.never,
-            sizeBytes: size,
+            sizeBytes: breakdown.totalBytes,
             paths: toRemove,
+            pathSizes: breakdown.byPath,
             selectedByDefault: false,
             cleanAction: CleanAction(
               method: CleanMethod.moveToTrash,
@@ -611,8 +629,8 @@ class ScanService implements ScanEngine {
           .listSync()
           .map((e) => e.path)
           .toList();
-      final size = await _sizes.pathsTotal(children);
-      if (size > 0) {
+      final breakdown = await _sizes.pathBreakdown(children);
+      if (breakdown.totalBytes > 0) {
         items.add(
           ScanItem(
             id: 'ios-device-support',
@@ -621,8 +639,9 @@ class ScanService implements ScanEngine {
             risk: RiskLevel.conditional,
             explain: 'Symbols for physical devices; re-download when device connects.',
             regenerates: RegeneratesKind.reDownload,
-            sizeBytes: size,
+            sizeBytes: breakdown.totalBytes,
             paths: children,
+            pathSizes: breakdown.byPath,
             selectedByDefault: false,
             cleanAction: CleanAction(
               method: CleanMethod.moveToTrash,
@@ -664,8 +683,8 @@ class ScanService implements ScanEngine {
           'Code Cache',
           p.join('Service Worker', 'CacheStorage'),
         ]);
-        final size = await _sizes.pathsTotal(cachePaths);
-        if (size == 0) {
+        final breakdown = await _sizes.pathBreakdown(cachePaths);
+        if (breakdown.totalBytes == 0) {
           return null;
         }
         return ScanItem(
@@ -675,8 +694,9 @@ class ScanService implements ScanEngine {
           risk: RiskLevel.conditional,
           explain: 'Cache only; cookies and logins untouched.',
           regenerates: RegeneratesKind.automatically,
-          sizeBytes: size,
+          sizeBytes: breakdown.totalBytes,
           paths: cachePaths,
+          pathSizes: breakdown.byPath,
           selectedByDefault: false,
           preconditionMet: !chromeRunning,
           preconditionHint: chromeRunning ? 'Quit Google Chrome first.' : null,
@@ -702,8 +722,8 @@ class ScanService implements ScanEngine {
       if (versions.length > 1) {
         oldIde.addAll(versions.skip(1).map((d) => d.path));
       }
-      final size = await _sizes.pathsTotal(oldIde);
-      if (size > 0) {
+      final breakdown = await _sizes.pathBreakdown(oldIde);
+      if (breakdown.totalBytes > 0) {
         items.add(
           ScanItem(
             id: 'jetbrains-old-versions',
@@ -712,8 +732,9 @@ class ScanService implements ScanEngine {
             risk: RiskLevel.conditional,
             explain: 'Keeps the newest JetBrains config folder only.',
             regenerates: RegeneratesKind.never,
-            sizeBytes: size,
+            sizeBytes: breakdown.totalBytes,
             paths: oldIde,
+            pathSizes: breakdown.byPath,
             selectedByDefault: false,
             cleanAction: CleanAction(
               method: CleanMethod.moveToTrash,
@@ -766,8 +787,8 @@ class ScanService implements ScanEngine {
       if (paths.isEmpty) {
         return null;
       }
-      final size = await _sizes.pathsTotal(paths);
-      if (size == 0) {
+      final breakdown = await _sizes.pathBreakdown(paths);
+      if (breakdown.totalBytes == 0) {
         return null;
       }
       final id = 'project-${_hashPath(project)}';
@@ -779,8 +800,9 @@ class ScanService implements ScanEngine {
         explain:
             'Project not modified in $staleDays+ days; build outputs only.',
         regenerates: RegeneratesKind.onNextBuild,
-        sizeBytes: size,
+        sizeBytes: breakdown.totalBytes,
         paths: paths,
+        pathSizes: breakdown.byPath,
         selectedByDefault: false,
         detail: project,
         cleanAction: CleanAction(method: CleanMethod.moveToTrash, paths: paths),
@@ -818,6 +840,7 @@ class ScanService implements ScanEngine {
           regenerates: RegeneratesKind.never,
           sizeBytes: size,
           paths: [r.$3],
+          pathSizes: {r.$3: size},
           selectedByDefault: false,
         ),
       );
