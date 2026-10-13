@@ -5,6 +5,7 @@ import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 import '../theme/mdc_theme.dart';
 import 'copy_command_button.dart';
 import 'deletion_guide_dialog.dart';
+import 'open_folder_button.dart';
 
 /// Expanded body: metadata plus one row per sub-target.
 class ScanItemExpandedDetails extends StatelessWidget {
@@ -112,6 +113,12 @@ class _SubdetailRow extends StatelessWidget {
               ],
             ),
           ),
+          if (isOpenableFolderPath(subdetail.value))
+            OpenFolderButton(
+              paths: [subdetail.value],
+              iconSize: 18,
+              dense: true,
+            ),
           IconButton(
             icon: const Icon(Icons.copy, size: 18),
             tooltip: 'Copy',

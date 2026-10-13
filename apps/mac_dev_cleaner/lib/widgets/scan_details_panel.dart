@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 
 import '../controller/cleaner_controller.dart';
+import 'open_folder_button.dart';
 import 'scan_activity_log.dart';
 import 'scan_item_subdetail_list.dart';
 
@@ -148,6 +149,7 @@ class _ItemDetailsList extends StatelessWidget {
         final item = items[index];
         final subCount = item.subdetails.length;
         final canExpand = subCount > 0 || item.detail != null;
+        final folders = openableFoldersFor(item);
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
@@ -155,7 +157,15 @@ class _ItemDetailsList extends StatelessWidget {
             margin: EdgeInsets.zero,
             child: ExpansionTile(
               initiallyExpanded: false,
-              title: Text(item.name, style: theme.textTheme.titleSmall),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(item.name, style: theme.textTheme.titleSmall),
+                  ),
+                  if (folders.isNotEmpty)
+                    OpenFolderButton(paths: folders, iconSize: 18, dense: true),
+                ],
+              ),
               subtitle: Text(
                 '${formatBytes(item.sizeBytes)} · ${item.risk.label}'
                 '${subCount > 1 ? ' · $subCount targets' : ''}'

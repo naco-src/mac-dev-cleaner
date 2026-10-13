@@ -4,6 +4,7 @@ import 'package:mac_dev_cleaner_core/mac_dev_cleaner_core.dart';
 import '../theme/mdc_theme.dart';
 import 'copy_command_button.dart';
 import 'deletion_guide_dialog.dart';
+import 'open_folder_button.dart';
 import 'risk_badge.dart';
 import 'scan_item_subdetail_list.dart';
 
@@ -31,6 +32,7 @@ class _ScanItemTileState extends State<ScanItemTile> {
     final item = widget.item;
     final canSelect = item.cleanable && item.preconditionMet;
     final copyParts = item.copyCommandParts;
+    final folders = openableFoldersFor(item);
     final subCount = item.subdetails.length;
     final canExpand = subCount > 0 || item.detail != null;
 
@@ -99,6 +101,8 @@ class _ScanItemTileState extends State<ScanItemTile> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (folders.isNotEmpty)
+                  OpenFolderButton(paths: folders, dense: true),
                 DeletionGuideIconButton(item: item),
                 if (copyParts.isNotEmpty)
                   CopyCommandButton(
