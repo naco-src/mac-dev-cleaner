@@ -1,29 +1,19 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "mac-dev-cleaner",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
-            "name": "mac-dev-cleaner-cli",
-            "cwd": "apps/mac-dev-cleaner-cli",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
             "name": "mac_dev_cleaner",
             "cwd": "apps/mac_dev_cleaner",
+            "program": "lib/main.dart",
+            "deviceId": "macos",
             "request": "launch",
             "type": "dart"
         },
         {
             "name": "mac_dev_cleaner (profile mode)",
             "cwd": "apps/mac_dev_cleaner",
+            "program": "lib/main.dart",
+            "deviceId": "macos",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
@@ -31,13 +21,24 @@
         {
             "name": "mac_dev_cleaner (release mode)",
             "cwd": "apps/mac_dev_cleaner",
+            "program": "lib/main.dart",
+            "deviceId": "macos",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"
         },
         {
-            "name": "mac_dev_cleaner_core",
+            "name": "mdc",
+            "cwd": "apps/mac-dev-cleaner-cli",
+            "program": "bin/mdc.dart",
+            "args": ["--help"],
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "mac_dev_cleaner_core (tests)",
             "cwd": "packages/mac_dev_cleaner_core",
+            "program": "test/",
             "request": "launch",
             "type": "dart"
         }
