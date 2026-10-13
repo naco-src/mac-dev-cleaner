@@ -7,7 +7,7 @@ import 'copy_command_parts.dart';
 List<ScanItemSubdetail> scanItemSubdetailsFor(ScanItem item) {
   final parts = copyCommandPartsFor(item);
   if (parts.isNotEmpty) {
-    return [
+    return _largestFirst([
       for (var i = 0; i < parts.length; i++)
         ScanItemSubdetail(
           label: parts[i].label,
@@ -19,11 +19,11 @@ List<ScanItemSubdetail> scanItemSubdetailsFor(ScanItem item) {
             parts.length,
           ),
         ),
-    ];
+    ]);
   }
 
   if (item.paths.isNotEmpty) {
-    return [
+    return _largestFirst([
       for (var i = 0; i < item.paths.length; i++)
         ScanItemSubdetail(
           label: _pathLabel(item.paths[i]),
@@ -35,7 +35,7 @@ List<ScanItemSubdetail> scanItemSubdetailsFor(ScanItem item) {
             item.paths.length,
           ),
         ),
-    ];
+    ]);
   }
 
   final cmd = item.cleanAction?.commandDescription;
@@ -50,6 +50,21 @@ List<ScanItemSubdetail> scanItemSubdetailsFor(ScanItem item) {
   }
 
   return const [];
+}
+
+/// Largest known size first. Unknown sizes stay at the end; ties keep input order.
+List<ScanItemSubdetail> _largestFirst(List<ScanItemSubdetail> details) {
+  final indexed = [
+    for (var i = 0; i < details.length; i++) (detail: details[i], index: i),
+  ];
+  indexed.sort((a, b) {
+    final sizeCompare = (b.detail.sizeBytes ?? -1).compareTo(
+      a.detail.sizeBytes ?? -1,
+    );
+    if (sizeCompare != 0) return sizeCompare;
+    return a.index.compareTo(b.index);
+  });
+  return [for (final entry in indexed) entry.detail];
 }
 
 int? _subdetailSizeBytes(

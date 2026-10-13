@@ -36,10 +36,10 @@ void main() {
       },
     );
     expect(item.subdetails, hasLength(2));
-    expect(item.subdetails[0].label, 'Cursor');
-    expect(item.subdetails[0].sizeBytes, 100);
-    expect(item.subdetails[1].label, 'Google');
-    expect(item.subdetails[1].sizeBytes, 200);
+    expect(item.subdetails[0].label, 'Google');
+    expect(item.subdetails[0].sizeBytes, 200);
+    expect(item.subdetails[1].label, 'Cursor');
+    expect(item.subdetails[1].sizeBytes, 100);
   });
 
   test('subdetails include per-path sizes from pathSizes', () {
@@ -58,7 +58,28 @@ void main() {
         paths: ['/a', '/b'],
       ),
     );
-    expect(item.subdetails[0].sizeBytes, 100);
-    expect(item.subdetails[1].sizeBytes, 200);
+    expect(item.subdetails[0].sizeBytes, 200);
+    expect(item.subdetails[1].sizeBytes, 100);
+  });
+
+  test('subdetails order largest size first and keep ties stable', () {
+    final item = ScanItem(
+      id: 'multi',
+      name: 'Multi',
+      group: RuleGroup.xcode,
+      risk: RiskLevel.safe,
+      explain: 'explain',
+      regenerates: RegeneratesKind.onNextBuild,
+      sizeBytes: 450,
+      paths: ['/small', '/tied-a', '/unknown', '/large', '/tied-b'],
+      pathSizes: {'/small': 10, '/tied-a': 50, '/large': 300, '/tied-b': 50},
+    );
+    expect(item.subdetails.map((s) => s.value).toList(), [
+      '/large',
+      '/tied-a',
+      '/tied-b',
+      '/small',
+      '/unknown',
+    ]);
   });
 }
