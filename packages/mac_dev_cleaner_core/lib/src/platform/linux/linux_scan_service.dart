@@ -44,6 +44,7 @@ class LinuxScanService implements ScanEngine {
 
   @override
   Future<List<ScanItem>> scanAll({ScanProgressCallback? onProgress}) async {
+    _sizes.clearCache();
     void log(ScanLogLevel level, String message) {
       onProgress?.call(ScanLogEntry(level: level, message: message));
     }
@@ -87,6 +88,7 @@ class LinuxScanService implements ScanEngine {
       projectRefs = ProjectRefSnapshot(
         ndkVersions: {},
         compileSdks: {},
+        buildToolsVersions: {},
         gradleWrapperVersions: {},
         projectPaths: [],
       );

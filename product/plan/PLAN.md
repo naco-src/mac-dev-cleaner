@@ -91,9 +91,9 @@ Commands:
 
 | Item | Smart check |
 | --- | --- |
-| Android NDK versions (16 GB) | Keep versions referenced by `ndkVersion` in `build.gradle`/`build.gradle.kts` under project roots, plus the default from the installed Flutter SDK. Offer the rest via `sdkmanager --uninstall "ndk;<ver>"`. |
+| Android NDK versions (16 GB) | Keep versions referenced by `ndkVersion` in `build.gradle`/`build.gradle.kts` under project roots. If indexing finds no references, withhold NDK removal candidates. Offer the rest via `sdkmanager --uninstall "ndk;<ver>"`. |
 | Android system images (12 GB) | Parse `~/.android/avd/*.avd/config.ini` (`image.sysdir.1`). Images not used by any AVD are candidates. Offer to delete old AVDs too. |
-| Android platforms and build-tools | Keep the newest few and any version referenced by projects (`compileSdk`, `buildToolsVersion`). |
+| Android platforms and build-tools | Keep project `compileSdk` and `buildToolsVersion` references; retain all candidates if project indexing finds no references. Uninstall with `sdkmanager`. |
 | iOS simulator runtimes (about 42 GB) | `xcrun simctl runtime list -j` and `xcrun simctl list devices -j`. Show which runtimes have devices. Delete with `xcrun simctl runtime delete <id>`, never `rm`. |
 | Xcode Archives | Group by app, keep the newest N per app (they hold dSYMs). |
 | iOS DeviceSupport | Keep versions matching devices recently connected; offer older ones. |
@@ -102,6 +102,8 @@ Commands:
 | Chrome / Google (12 GB) | Break down by profile. Show `Cache`, `Code Cache`, `Service Worker/CacheStorage` as cleanable with Chrome closed. Other large folders (for example on-device model data) are shown for the user to decide after checking what they are. |
 | Gradle wrappers and JDKs | Keep wrapper versions used by project `gradle-wrapper.properties`; offer the rest. |
 | `~/.pub-cache` | Offer only when large; warn that everything re-downloads. |
+| Swift package caches | Measure `~/Library/Caches/org.swift.swiftpm` and `~/Library/org.swift.swiftpm`; downloads can be fetched again. |
+| Additional browsers | Scan Chromium, Edge, Brave, and Firefox cache locations; require each browser to be closed. |
 | Project build output | Under configured roots (for example `~/Projects`, `~/AndroidStudioProjects`): `build/`, `.dart_tool/`, `ios/Pods`, `android/.gradle`, `node_modules/` in projects not modified for 30+ days. Listed per project. Never touches `Podfile.lock` or source. |
 
 ### Protected (never touched, only reported)

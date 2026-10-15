@@ -59,20 +59,52 @@ class SharedScanPhases {
       ),
     );
 
-    for (final entry in [
-      ('pnpm-store', 'pnpm', ['store', 'prune']),
-      ('yarn-cache', 'yarn', ['cache', 'clean']),
+    final pnpmStores = [
+      p.join(paths.home, '.local', 'share', 'pnpm', 'store'),
+      p.join(paths.home, 'Library', 'pnpm', 'store'),
+      p.join(paths.home, '.pnpm-store'),
+    ];
+    final yarnCaches = [
+      p.join(paths.home, '.cache', 'yarn'),
+      p.join(paths.home, 'Library', 'Caches', 'Yarn'),
+      p.join(paths.home, '.yarn', 'berry', 'cache'),
+    ];
+    for (final (tool, args, candidates) in [
+      ('pnpm', ['store', 'path'], pnpmStores),
+      ('yarn', ['cache', 'dir'], yarnCaches),
     ]) {
+      final result = await commandRunner.run(tool, args);
+      final reported = result.success ? result.stdout.trim() : '';
+      candidates
+        ..clear()
+        ..addAll(reported.isEmpty ? const <String>[] : [reported]);
+    }
+    final existingPnpmStores = pnpmStores
+        .where((path) => fileSystem.directory(path).existsSync())
+        .toSet()
+        .toList();
+    final existingYarnCaches = yarnCaches
+        .where((path) => fileSystem.directory(path).existsSync())
+        .toSet()
+        .toList();
+    for (final entry in [
+      ('pnpm-store', 'pnpm', ['store', 'prune'], existingPnpmStores),
+      ('yarn-cache', 'yarn', ['cache', 'clean'], existingYarnCaches),
+    ]) {
+      final breakdown = await sizes.pathBreakdown(entry.$4);
+      final size = breakdown.totalBytes;
       items.add(
         ScanItem(
           id: entry.$1,
-          name: entry.$1,
+          name: entry.$2 == 'pnpm' ? 'pnpm store' : 'Yarn cache',
           group: RuleGroup.node,
           risk: RiskLevel.safe,
           explain: 'Package manager cache (if installed).',
           regenerates: RegeneratesKind.reDownload,
-          sizeBytes: 0,
-          selectedByDefault: true,
+          sizeBytes: size,
+          paths: size > 0 ? entry.$4 : const [],
+          pathSizes: breakdown.byPath,
+          selectedByDefault: size > 0,
           cleanAction: CleanAction(
             method: CleanMethod.runCommand,
             command: [entry.$2, ...entry.$3],
@@ -88,8 +120,7 @@ class SharedScanPhases {
     ];
     final gradleSizes = await mapConcurrent(
       gradlePaths,
-      (gradlePath) async =>
-          (gradlePath, await sizes.directorySize(gradlePath)),
+      (gradlePath) async => (gradlePath, await sizes.directorySize(gradlePath)),
       concurrency: scanConcurrency,
     );
     for (final (gradlePath, size) in gradleSizes) {
@@ -169,7 +200,8 @@ class SharedScanPhases {
     final items = <ScanItem>[];
     final sdk = paths.androidSdk;
     final ndkRoot = p.join(sdk, 'ndk');
-    if (fileSystem.directory(ndkRoot).existsSync()) {
+    if (fileSystem.directory(ndkRoot).existsSync() &&
+        refs.ndkVersions.isNotEmpty) {
       final keep = refs.ndkVersions;
       final uninstall = <String>[];
       for (final entity in fileSystem.directory(ndkRoot).listSync()) {
@@ -194,8 +226,7 @@ class SharedScanPhases {
             name: 'Android NDK (not referenced by projects)',
             group: RuleGroup.android,
             risk: RiskLevel.conditional,
-            explain:
-                'Keeps NDK versions from ndkVersion in Gradle files under project roots.',
+            explain: 'Keeps NDK versions from ndkVersion in Gradle files under project roots.',
             regenerates: RegeneratesKind.reDownload,
             sizeBytes: breakdown.totalBytes,
             paths: uninstall,
@@ -265,8 +296,107 @@ class SharedScanPhases {
             pathSizes: breakdown.byPath,
             selectedByDefault: false,
             cleanAction: CleanAction(
-              method: CleanMethod.moveToTrash,
-              paths: unused,
+              method: CleanMethod.runCommand,
+              command: [
+                paths.sdkmanagerBin ?? 'sdkmanager',
+                '--uninstall',
+                ...unused.map((path) => 'platforms;${p.basename(path)}'),
+              ],
+              commandDescription:
+                  '${paths.sdkmanagerBin ?? 'sdkmanager'} --uninstall ${unused.map((path) => '"platforms;${p.basename(path)}"').join(' ')}',
+            ),
+          ),
+        );
+      }
+    }
+
+    // Platform/build-tools versions are safe candidates only when projects
+    // reference a known compileSdk; retain all versions when indexing found none.
+    final platforms = p.join(sdk, 'platforms');
+    if (refs.compileSdks.isNotEmpty &&
+        fileSystem.directory(platforms).existsSync()) {
+      final unused = fileSystem
+          .directory(platforms)
+          .listSync()
+          .where((e) => fileSystem.isDirectorySync(e.path))
+          .where(
+            (e) => !refs.compileSdks.contains(
+              p.basename(e.path).replaceFirst('android-', ''),
+            ),
+          )
+          .map((e) => e.path)
+          .toList();
+      final breakdown = await sizes.pathBreakdown(unused);
+      if (breakdown.totalBytes > 0) {
+        items.add(
+          ScanItem(
+            id: 'android-platforms-unused',
+            name: 'Android platforms (not referenced)',
+            group: RuleGroup.android,
+            risk: RiskLevel.conditional,
+            explain:
+                'Android SDK platforms not referenced by indexed projects.',
+            regenerates: RegeneratesKind.reDownload,
+            sizeBytes: breakdown.totalBytes,
+            paths: unused,
+            pathSizes: breakdown.byPath,
+            selectedByDefault: false,
+            cleanAction: CleanAction(
+              method: CleanMethod.runCommand,
+              command: [
+                paths.sdkmanagerBin ?? 'sdkmanager',
+                '--uninstall',
+                ...unused.map((path) => 'platforms;${p.basename(path)}'),
+              ],
+              commandDescription:
+                  '${paths.sdkmanagerBin ?? 'sdkmanager'} --uninstall ${unused.map((path) => '"platforms;${p.basename(path)}"').join(' ')}',
+            ),
+          ),
+        );
+      }
+    }
+
+    final buildTools = p.join(sdk, 'build-tools');
+    if (refs.buildToolsVersions.isNotEmpty &&
+        fileSystem.directory(buildTools).existsSync()) {
+      final versions =
+          fileSystem
+              .directory(buildTools)
+              .listSync()
+              .where((e) => fileSystem.isDirectorySync(e.path))
+              .toList()
+            ..sort((a, b) => b.path.compareTo(a.path));
+      final keep = {
+        ...refs.buildToolsVersions,
+        if (versions.isNotEmpty) p.basename(versions.first.path),
+      };
+      final unused = versions
+          .where((e) => !keep.contains(p.basename(e.path)))
+          .map((e) => e.path)
+          .toList();
+      final breakdown = await sizes.pathBreakdown(unused);
+      if (breakdown.totalBytes > 0) {
+        items.add(
+          ScanItem(
+            id: 'android-build-tools-old',
+            name: 'Older Android build-tools',
+            group: RuleGroup.android,
+            risk: RiskLevel.conditional,
+            explain: 'Keeps the newest build-tools version; older versions may be needed by unindexed projects.',
+            regenerates: RegeneratesKind.reDownload,
+            sizeBytes: breakdown.totalBytes,
+            paths: unused,
+            pathSizes: breakdown.byPath,
+            selectedByDefault: false,
+            cleanAction: CleanAction(
+              method: CleanMethod.runCommand,
+              command: [
+                paths.sdkmanagerBin ?? 'sdkmanager',
+                '--uninstall',
+                ...unused.map((path) => 'build-tools;${p.basename(path)}'),
+              ],
+              commandDescription:
+                  '${paths.sdkmanagerBin ?? 'sdkmanager'} --uninstall ${unused.map((path) => '"build-tools;${p.basename(path)}"').join(' ')}',
             ),
           ),
         );
@@ -398,7 +528,7 @@ class SharedScanPhases {
         name: name,
         group: group,
         risk: RiskLevel.protected,
-        explain: 'Shown for context; never deleted by mdc.',
+        explain: 'Aggregate context total; may include separately listed cleanable items. Never deleted by mdc.',
         regenerates: RegeneratesKind.never,
         sizeBytes: size,
         paths: [root],
@@ -417,7 +547,7 @@ class SharedScanPhases {
       name: name,
       group: group,
       risk: RiskLevel.protected,
-      explain: 'Shown for context; never deleted by mdc.',
+      explain: 'Aggregate context total; may include separately listed cleanable items. Never deleted by mdc.',
       regenerates: RegeneratesKind.never,
       sizeBytes: breakdown.totalBytes,
       paths: children,

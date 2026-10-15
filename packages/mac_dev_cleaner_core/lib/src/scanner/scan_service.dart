@@ -46,6 +46,7 @@ class ScanService implements ScanEngine {
 
   @override
   Future<List<ScanItem>> scanAll({ScanProgressCallback? onProgress}) async {
+    _sizes.clearCache();
     void log(ScanLogLevel level, String message) {
       onProgress?.call(ScanLogEntry(level: level, message: message));
     }
@@ -89,6 +90,7 @@ class ScanService implements ScanEngine {
       projectRefs = ProjectRefSnapshot(
         ndkVersions: {},
         compileSdks: {},
+        buildToolsVersions: {},
         gradleWrapperVersions: {},
         projectPaths: [],
       );
@@ -186,6 +188,32 @@ class ScanService implements ScanEngine {
           cleanAction: CleanAction(
             method: CleanMethod.moveToTrash,
             paths: [cocoapods],
+          ),
+        ),
+      );
+    }
+
+    final swiftPackageCaches = [
+      p.join(paths.caches, 'org.swift.swiftpm'),
+      p.join(paths.library, 'org.swift.swiftpm'),
+    ].where((path) => fileSystem.directory(path).existsSync()).toList();
+    final swiftBreakdown = await _sizes.pathBreakdown(swiftPackageCaches);
+    if (swiftBreakdown.totalBytes > 0) {
+      items.add(
+        ScanItem(
+          id: 'swift-package-cache',
+          name: 'Swift package caches',
+          group: RuleGroup.xcode,
+          risk: RiskLevel.safe,
+          explain: 'Downloaded Swift package repositories; Xcode can fetch them again.',
+          regenerates: RegeneratesKind.reDownload,
+          sizeBytes: swiftBreakdown.totalBytes,
+          paths: swiftPackageCaches,
+          pathSizes: swiftBreakdown.byPath,
+          selectedByDefault: true,
+          cleanAction: CleanAction(
+            method: CleanMethod.moveToTrash,
+            paths: swiftPackageCaches,
           ),
         ),
       );
@@ -438,56 +466,124 @@ class ScanService implements ScanEngine {
 
   Future<List<ScanItem>> _ideAndBrowser() async {
     final items = <ScanItem>[];
-    final chromeRoot = p.join(paths.applicationSupport, 'Google', 'Chrome');
-    if (fileSystem.directory(chromeRoot).existsSync()) {
-      final profiles = fileSystem
-          .directory(chromeRoot)
-          .listSync()
-          .where((e) => fileSystem.isDirectorySync(e.path));
-      final profilePaths = profiles
-          .map((e) => e.path)
-          .where(
-            (path) =>
-                p.basename(path).startsWith('Profile') ||
-                p.basename(path) == 'Default',
-          )
-          .toList();
-      final chromeRunning = await isProcessRunning(
-        commandRunner,
+    for (final (browserId, browserName, profileRoot, processName) in [
+      (
+        'chrome',
         'Google Chrome',
-      );
-      final profileItems = await mapConcurrent(profilePaths, (
-        profilePath,
-      ) async {
-        final cachePaths = _sizes.existingChildPaths(profilePath, [
-          'Cache',
-          'Code Cache',
-          p.join('Service Worker', 'CacheStorage'),
-        ]);
-        final breakdown = await _sizes.pathBreakdown(cachePaths);
-        if (breakdown.totalBytes == 0) {
-          return null;
-        }
-        return ScanItem(
-          id: 'chrome-cache-${p.basename(profilePath)}',
-          name: 'Chrome ${p.basename(profilePath)} caches',
-          group: RuleGroup.browser,
-          risk: RiskLevel.conditional,
-          explain: 'Cache only; cookies and logins untouched.',
-          regenerates: RegeneratesKind.automatically,
-          sizeBytes: breakdown.totalBytes,
-          paths: cachePaths,
-          pathSizes: breakdown.byPath,
-          selectedByDefault: false,
-          preconditionMet: !chromeRunning,
-          preconditionHint: chromeRunning ? 'Quit Google Chrome first.' : null,
-          cleanAction: CleanAction(
-            method: CleanMethod.moveToTrash,
+        p.join(paths.applicationSupport, 'Google', 'Chrome'),
+        'Google Chrome',
+      ),
+      (
+        'edge',
+        'Microsoft Edge',
+        p.join(paths.applicationSupport, 'Microsoft Edge'),
+        'Microsoft Edge',
+      ),
+      (
+        'brave',
+        'Brave',
+        p.join(paths.applicationSupport, 'BraveSoftware', 'Brave-Browser'),
+        'Brave Browser',
+      ),
+      (
+        'chromium',
+        'Chromium',
+        p.join(paths.applicationSupport, 'Chromium'),
+        'Chromium',
+      ),
+    ]) {
+      final chromeRoot = profileRoot;
+      if (fileSystem.directory(chromeRoot).existsSync()) {
+        final profiles = fileSystem
+            .directory(chromeRoot)
+            .listSync()
+            .where((e) => fileSystem.isDirectorySync(e.path));
+        final profilePaths = profiles
+            .map((e) => e.path)
+            .where(
+              (path) =>
+                  p.basename(path).startsWith('Profile') ||
+                  p.basename(path) == 'Default',
+            )
+            .toList();
+        final chromeRunning = await isProcessRunning(
+          commandRunner,
+          processName,
+        );
+        final profileItems = await mapConcurrent(profilePaths, (
+          profilePath,
+        ) async {
+          final cachePaths = _sizes.existingChildPaths(profilePath, [
+            'Cache',
+            'Code Cache',
+            p.join('Service Worker', 'CacheStorage'),
+          ]);
+          final breakdown = await _sizes.pathBreakdown(cachePaths);
+          if (breakdown.totalBytes == 0) {
+            return null;
+          }
+          return ScanItem(
+            id: '$browserId-cache-${p.basename(profilePath)}',
+            name: '$browserName ${p.basename(profilePath)} caches',
+            group: RuleGroup.browser,
+            risk: RiskLevel.conditional,
+            explain: 'Cache only; cookies and logins untouched.',
+            regenerates: RegeneratesKind.automatically,
+            sizeBytes: breakdown.totalBytes,
             paths: cachePaths,
+            pathSizes: breakdown.byPath,
+            selectedByDefault: false,
+            preconditionMet: !chromeRunning,
+            preconditionHint: chromeRunning ? 'Quit $browserName first.' : null,
+            cleanAction: CleanAction(
+              method: CleanMethod.moveToTrash,
+              paths: cachePaths,
+            ),
+          );
+        }, concurrency: scanConcurrency);
+        items.addAll(profileItems.whereType<ScanItem>());
+      }
+    }
+
+    final firefoxProfiles = p.join(
+      paths.home,
+      'Library',
+      'Caches',
+      'Firefox',
+      'Profiles',
+    );
+    if (fileSystem.directory(firefoxProfiles).existsSync()) {
+      final running = await isProcessRunning(commandRunner, 'Firefox');
+      final profilePaths = fileSystem
+          .directory(firefoxProfiles)
+          .listSync()
+          .where((e) => fileSystem.isDirectorySync(e.path))
+          .map((e) => e.path)
+          .toList();
+      for (final profile in profilePaths) {
+        final size = await _sizes.directorySize(profile);
+        if (size == 0) continue;
+        items.add(
+          ScanItem(
+            id: 'firefox-cache-${p.basename(profile)}',
+            name: 'Firefox ${p.basename(profile)} cache',
+            group: RuleGroup.browser,
+            risk: RiskLevel.conditional,
+            explain: 'Firefox cache only; profile data such as cookies and bookmarks stays.',
+            regenerates: RegeneratesKind.automatically,
+            sizeBytes: size,
+            paths: [profile],
+            pathSizes: {profile: size},
+            selectedByDefault: false,
+            preconditionMet: !running,
+            preconditionHint: running ? 'Quit Firefox first.' : null,
+            cleanAction: CleanAction(
+              method: CleanMethod.moveToTrash,
+              paths: [profile],
+            ),
           ),
         );
-      }, concurrency: scanConcurrency);
-      items.addAll(profileItems.whereType<ScanItem>());
+      }
     }
 
     final jetbrains = p.join(paths.applicationSupport, 'JetBrains');

@@ -16,13 +16,13 @@ class SizeScanner {
 
   final FileSystem fileSystem;
   final int concurrency;
+  final Map<String, Future<int>> _pathSizes = {};
+
+  /// Drops results between scans so cache entries never outlive a scan snapshot.
+  void clearCache() => _pathSizes.clear();
 
   Future<int> directorySize(String path) async {
-    final entity = fileSystem.directory(path);
-    if (!entity.existsSync()) {
-      return 0;
-    }
-    return _sizeOf(entity);
+    return _pathSize(path);
   }
 
   Future<int> pathsTotal(Iterable<String> paths) async {
@@ -46,6 +46,10 @@ class SizeScanner {
   }
 
   Future<int> _pathSize(String path) async {
+    return _pathSizes.putIfAbsent(path, () => _measurePath(path));
+  }
+
+  Future<int> _measurePath(String path) async {
     final dir = fileSystem.directory(path);
     final file = fileSystem.file(path);
     if (dir.existsSync()) {

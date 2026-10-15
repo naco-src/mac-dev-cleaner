@@ -1,5 +1,3 @@
-import 'dart:io' as io;
-
 import 'package:file/file.dart';
 import 'package:path/path.dart' as p;
 
@@ -17,6 +15,7 @@ class ProjectRefs {
   Future<ProjectRefSnapshot> collect() async {
     final ndkVersions = <String>{};
     final compileSdks = <String>{};
+    final buildToolsVersions = <String>{};
     final gradleWrapperVersions = <String>{};
     final projectPaths = <String>[];
 
@@ -27,7 +26,12 @@ class ProjectRefs {
       }
       await _walkProjects(root, (projectDir) {
         projectPaths.add(projectDir);
-        _scanGradleFiles(projectDir, ndkVersions, compileSdks);
+        _scanGradleFiles(
+          projectDir,
+          ndkVersions,
+          compileSdks,
+          buildToolsVersions,
+        );
         _scanGradleWrapper(projectDir, gradleWrapperVersions);
       });
     }
@@ -35,6 +39,7 @@ class ProjectRefs {
     return ProjectRefSnapshot(
       ndkVersions: ndkVersions,
       compileSdks: compileSdks,
+      buildToolsVersions: buildToolsVersions,
       gradleWrapperVersions: gradleWrapperVersions,
       projectPaths: projectPaths,
     );
@@ -44,12 +49,12 @@ class ProjectRefs {
     String root,
     void Function(String dir) onProject,
   ) async {
-    final dir = io.Directory(root);
+    final dir = fileSystem.directory(root);
     if (!dir.existsSync()) {
       return;
     }
     await for (final entity in dir.list(recursive: true, followLinks: false)) {
-      if (entity is! io.Directory) {
+      if (entity is! Directory) {
         continue;
       }
       final path = entity.path;
@@ -74,6 +79,7 @@ class ProjectRefs {
     String projectDir,
     Set<String> ndkVersions,
     Set<String> compileSdks,
+    Set<String> buildToolsVersions,
   ) {
     for (final name in ['build.gradle', 'build.gradle.kts']) {
       final file = fileSystem.file(p.join(projectDir, name));
@@ -94,6 +100,11 @@ class ProjectRefs {
       ).allMatches(content)) {
         compileSdks.add(match.group(1)!);
       }
+      for (final match in RegExp(
+        r'''buildToolsVersion\s*[= ]+\s*["']([^"']+)["']''',
+      ).allMatches(content)) {
+        buildToolsVersions.add(match.group(1)!);
+      }
     }
     final androidDir = fileSystem.directory(p.join(projectDir, 'android'));
     if (androidDir.existsSync()) {
@@ -110,6 +121,11 @@ class ProjectRefs {
           r'compileSdk\s*[= ]+\s*(\d+)',
         ).allMatches(content)) {
           compileSdks.add(match.group(1)!);
+        }
+        for (final match in RegExp(
+          r'''buildToolsVersion\s*[= ]+\s*["']([^"']+)["']''',
+        ).allMatches(content)) {
+          buildToolsVersions.add(match.group(1)!);
         }
       }
     }
@@ -154,12 +170,14 @@ class ProjectRefSnapshot {
   ProjectRefSnapshot({
     required this.ndkVersions,
     required this.compileSdks,
+    required this.buildToolsVersions,
     required this.gradleWrapperVersions,
     required this.projectPaths,
   });
 
   final Set<String> ndkVersions;
   final Set<String> compileSdks;
+  final Set<String> buildToolsVersions;
   final Set<String> gradleWrapperVersions;
   final List<String> projectPaths;
 }
